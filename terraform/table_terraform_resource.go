@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/turbot/steampipe-plugin-sdk/grpc/proto"
@@ -28,10 +27,22 @@ func tableTerraformResource(ctx context.Context) *plugin.Table {
 				Type:        proto.ColumnType_STRING,
 			},
 			{
-				Name:        "raw",
-				Description: "Raw information.",
+				Name:        "name",
+				Description: "Resource name.",
 				Type:        proto.ColumnType_STRING,
-				Transform:   transform.FromValue(),
+				Transform:   transform.FromField("Content.Name"),
+			},
+			{
+				Name:        "resource_type",
+				Description: "Resource type.",
+				Type:        proto.ColumnType_STRING,
+				Transform:   transform.FromField("Content.Type"),
+			},
+			{
+				Name:        "properties",
+				Description: "Resource properties.",
+				Type:        proto.ColumnType_JSON,
+				Transform:   transform.FromField("Content.Properties"),
 			},
 		},
 	}
@@ -41,9 +52,9 @@ type filePath struct {
 	Path string
 }
 
-type terraformResource struct {
+type terraformResourceItem struct {
 	Path    string
-	Content string
+	Content terraformResource
 }
 
 func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
@@ -112,19 +123,19 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 	// available by the optional key column
 	path := h.Item.(filePath).Path
 
-	data, err := os.ReadFile(path)
-	//terraformFile, err := os.Open(path)
+	tfResources, err := Parse(path)
 	if err != nil {
 		return nil, err
 	}
 
-	dataStr := string(data)
-	plugin.Logger(ctx).Warn("Data", dataStr)
-	item := &terraformResource{
-		Path:    path,
-		Content: dataStr,
+	plugin.Logger(ctx).Warn("Resources", tfResources)
+	for _, resource := range tfResources {
+		item := terraformResourceItem{
+			Path:    path,
+			Content: resource,
+		}
+		d.StreamListItem(ctx, item)
 	}
-	d.StreamListItem(ctx, item)
 
 	return nil, nil
 }
