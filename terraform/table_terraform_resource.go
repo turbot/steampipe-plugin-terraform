@@ -4,8 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
+	"strings"
 
+	"github.com/Checkmarx/kics/pkg/model"
 	"github.com/turbot/steampipe-plugin-sdk/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/plugin"
 	"github.com/turbot/steampipe-plugin-sdk/plugin/transform"
@@ -123,18 +126,50 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 	// available by the optional key column
 	path := h.Item.(filePath).Path
 
-	tfResources, err := Parse(path)
+	combinedParser, err := Parser()
 	if err != nil {
 		return nil, err
 	}
 
-	plugin.Logger(ctx).Warn("Resources", tfResources)
-	for _, resource := range tfResources {
-		item := terraformResourceItem{
-			Path:    path,
-			Content: resource,
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var tfResource terraformResource
+
+	for _, parser := range combinedParser {
+		docs, _, err := parser.Parse(path, content)
+		if err != nil {
+			panic(err)
 		}
-		d.StreamListItem(ctx, item)
+
+		for _, doc := range docs {
+			if doc["resource"] != nil {
+				// Resources are grouped by resource type
+				for resourceType, resources := range doc["resource"].(model.Document) {
+					tfResource.Type = resourceType
+					// For each resource, scan its properties
+					for resourceName, resourceData := range resources.(model.Document) {
+						tfResource.Name = resourceName
+						tfResource.Properties = make(map[string]interface{})
+						for k, v := range resourceData.(model.Document) {
+							// Avoid adding properties like _kics_lines for now
+							if !strings.HasPrefix(k, "_kics") {
+								tfResource.Properties[k] = v
+							}
+						}
+					}
+
+					// Stream each resource
+					item := terraformResourceItem{
+						Path:    path,
+						Content: tfResource,
+					}
+					d.StreamListItem(ctx, item)
+				}
+			}
+		}
 	}
 
 	return nil, nil
