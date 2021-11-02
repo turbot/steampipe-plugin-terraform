@@ -42,6 +42,11 @@ func tableTerraformResource(ctx context.Context) *plugin.Table {
 				Transform:   transform.FromField("Content.Type"),
 			},
 			{
+				Name:        "start_line",
+				Description: "Starting line number.",
+				Type:        proto.ColumnType_INT,
+			},
+			{
 				Name:        "properties",
 				Description: "Resource properties.",
 				Type:        proto.ColumnType_JSON,
@@ -56,8 +61,9 @@ type filePath struct {
 }
 
 type terraformResourceItem struct {
-	Path    string
-	Content terraformResource
+	Path      string
+	StartLine int
+	Content   terraformResource
 }
 
 func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
@@ -148,14 +154,20 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 			if doc["resource"] != nil {
 				// Resources are grouped by resource type
 				for resourceType, resources := range doc["resource"].(model.Document) {
+					plugin.Logger(ctx).Warn("Resource:", resources)
 					tfResource.Type = resourceType
 					// For each resource, scan its properties
 					for resourceName, resourceData := range resources.(model.Document) {
 						tfResource.Name = resourceName
 						tfResource.Properties = make(map[string]interface{})
 						for k, v := range resourceData.(model.Document) {
-							// Avoid adding properties like _kics_lines for now
-							if !strings.HasPrefix(k, "_kics") {
+							// The starting line number for a resource is stored in "_kics__default"
+							if k == "_kics_lines" {
+								tfResource.StartLine = v.(map[string]interface{})["_kics__default"].(map[string]model.LineObject)["_kics_line"]
+							}
+
+							// Avoid adding _kicks properties directly
+							if strings.HasPrefix(k, "_kics") {
 								tfResource.Properties[k] = v
 							}
 						}

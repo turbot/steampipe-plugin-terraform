@@ -12,6 +12,7 @@ import (
 type terraformResource struct {
 	Name       string
 	Type       string
+	StartLine  int
 	Properties map[string]interface{}
 }
 
