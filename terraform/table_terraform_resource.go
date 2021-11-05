@@ -11,7 +11,8 @@ import (
 	"github.com/Checkmarx/kics/pkg/model"
 	"github.com/turbot/steampipe-plugin-sdk/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/plugin"
-	"github.com/turbot/steampipe-plugin-sdk/plugin/transform"
+	"github.com/zclconf/go-cty/cty/gocty"
+	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
 
 func tableTerraformResource(ctx context.Context) *plugin.Table {
@@ -33,13 +34,11 @@ func tableTerraformResource(ctx context.Context) *plugin.Table {
 				Name:        "name",
 				Description: "Resource name.",
 				Type:        proto.ColumnType_STRING,
-				Transform:   transform.FromField("Content.Name"),
 			},
 			{
-				Name:        "resource_type",
+				Name:        "type",
 				Description: "Resource type.",
 				Type:        proto.ColumnType_STRING,
-				Transform:   transform.FromField("Content.Type"),
 			},
 			{
 				Name:        "start_line",
@@ -50,7 +49,31 @@ func tableTerraformResource(ctx context.Context) *plugin.Table {
 				Name:        "properties",
 				Description: "Resource properties.",
 				Type:        proto.ColumnType_JSON,
-				Transform:   transform.FromField("Content.Properties"),
+			},
+			{
+				Name:        "count",
+				Description: "The count meta-argument accepts a whole number, and creates that many instances of the resource or module.",
+				Type:        proto.ColumnType_INT,
+			},
+			{
+				Name:        "for_each",
+				Description: "The for_each meta-argument accepts a map or a set of strings, and creates an instance for each item in that map or set.",
+				Type:        proto.ColumnType_JSON,
+			},
+			{
+				Name:        "depends_on",
+				Description: "Use the depends_on meta-argument to handle hidden resource or module dependencies that Terraform can't automatically infer.",
+				Type:        proto.ColumnType_JSON,
+			},
+			{
+				Name:        "lifecycle",
+				Description: "The lifecycle meta-argument is a nested block that can appear within a resource block.",
+				Type:        proto.ColumnType_JSON,
+			},
+			{
+				Name:        "provider",
+				Description: "The provider meta-argument specifies which provider configuration to use for a resource, overriding Terraform's default behavior of selecting one based on the resource type name.",
+				Type:        proto.ColumnType_STRING,
 			},
 		},
 	}
@@ -60,10 +83,25 @@ type filePath struct {
 	Path string
 }
 
-type terraformResourceItem struct {
-	Path      string
-	StartLine int
-	Content   terraformResource
+type lifecycleBlock struct {
+	CreateBeforeDestroy bool
+	PreventDestroy      bool
+	IgnoreChanges       []string
+}
+
+type terraformResource struct {
+	Name       string
+	Type       string
+	Path       string
+	StartLine  int
+	Properties map[string]interface{}
+	DependsOn  []string
+	Count      int
+	ForEach    map[string]interface{}
+	// A resource's provider arg will always reference a provider block
+	Provider string
+	// TODO: Should this be a lifecycleBlock type or generic?
+	Lifecycle map[string]interface{}
 }
 
 func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
@@ -150,35 +188,74 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 			panic(err)
 		}
 
+		// TODO: Fix multiple resources of same type not showing up
+		// TODO: Fix details not clearing out between resources
 		for _, doc := range docs {
 			if doc["resource"] != nil {
 				// Resources are grouped by resource type
 				for resourceType, resources := range doc["resource"].(model.Document) {
 					plugin.Logger(ctx).Warn("Resource:", resources)
+					tfResource.Path = path
 					tfResource.Type = resourceType
 					// For each resource, scan its properties
 					for resourceName, resourceData := range resources.(model.Document) {
 						tfResource.Name = resourceName
+						// Reset Properties and Lifecycle each loop
 						tfResource.Properties = make(map[string]interface{})
+						tfResource.Lifecycle = make(map[string]interface{})
+
 						for k, v := range resourceData.(model.Document) {
 							// The starting line number for a resource is stored in "_kics__default"
 							if k == "_kics_lines" {
-								tfResource.StartLine = v.(map[string]interface{})["_kics__default"].(map[string]model.LineObject)["_kics_line"]
+								// TODO: Fix line number check
+								//tfResource.StartLine = v.(map[string]interface{})["_kics__default"].(map[string]model.LineObject)["_kics_line"]
+								tfResource.StartLine = 999
+							}
+
+							if k == "count" {
+								var countVal int
+								err := gocty.FromCtyValue(v.(ctyjson.SimpleJSONValue).Value, &countVal)
+								if err != nil {
+									plugin.Logger(ctx).Warn("count value error:", err)
+									panic(err)
+								}
+								tfResource.Count = countVal
+							}
+
+							if k == "provider" {
+								tfResource.Provider = v.(string)
+							}
+
+							if k == "for_each" {
+								tfResource.ForEach = v.(model.Document)
+							}
+
+							if k == "lifecycle" {
+								for k, v := range v.(model.Document) {
+									if !strings.HasPrefix(k, "_kics") {
+										tfResource.Lifecycle[k] = v
+									}
+								}
+							}
+
+							if k == "depends_on" {
+								interfaces := v.([]interface{})
+								s := make([]string, len(interfaces))
+								for i, v := range interfaces {
+									s[i] = fmt.Sprint(v)
+								}
+								tfResource.DependsOn = s
 							}
 
 							// Avoid adding _kicks properties directly
-							if strings.HasPrefix(k, "_kics") {
+							// Add meta-arguments even though they have their own columns for completeness
+							if !strings.HasPrefix(k, "_kics") {
 								tfResource.Properties[k] = v
 							}
 						}
 					}
 
-					// Stream each resource
-					item := terraformResourceItem{
-						Path:    path,
-						Content: tfResource,
-					}
-					d.StreamListItem(ctx, item)
+					d.StreamListItem(ctx, tfResource)
 				}
 			}
 		}

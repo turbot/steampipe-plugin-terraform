@@ -9,13 +9,6 @@ import (
 	yamlParser "github.com/Checkmarx/kics/pkg/parser/yaml"
 )
 
-type terraformResource struct {
-	Name       string
-	Type       string
-	StartLine  int
-	Properties map[string]interface{}
-}
-
 func Parser() ([]*parser.Parser, error) {
 
 	combinedParser, err := parser.NewBuilder().
