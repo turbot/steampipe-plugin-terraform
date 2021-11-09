@@ -86,10 +86,8 @@ func buildProvider(path string, name string, d model.Document) (terraformProvide
 			tfProvider.Version = v.(string)
 		}
 
-		// Avoid adding _kicks properties directly
-		// Add meta-arguments even though they have their own columns for completeness
-		// TODO: Should meta-arguments be added again here?
-		if !strings.HasPrefix(k, "_kics") {
+		// Avoid adding _kicks properties and meta-arguments directly
+		if !strings.HasPrefix(k, "_kics") && k != "alias" && k != "version" {
 			tfProvider.Properties[k] = v
 		}
 	}

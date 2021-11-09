@@ -77,12 +77,6 @@ func tableTerraformResource(ctx context.Context) *plugin.Table {
 	}
 }
 
-type lifecycleBlock struct {
-	CreateBeforeDestroy bool
-	PreventDestroy      bool
-	IgnoreChanges       []string
-}
-
 type terraformResource struct {
 	Name       string
 	Type       string
@@ -93,8 +87,7 @@ type terraformResource struct {
 	Count      int
 	ForEach    map[string]interface{}
 	// A resource's provider arg will always reference a provider block
-	Provider string
-	// TODO: Should this be a lifecycleBlock type or generic?
+	Provider  string
 	Lifecycle map[string]interface{}
 }
 
@@ -178,10 +171,8 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 								tfResource.DependsOn = s
 							}
 
-							// Avoid adding _kicks properties directly
-							// Add meta-arguments even though they have their own columns for completeness
-							// TODO: Should meta-arguments be added again here?
-							if !strings.HasPrefix(k, "_kics") {
+							// Avoid adding _kicks properties and meta-arguments directly
+							if !strings.HasPrefix(k, "_kics") && k != "count" && k != "provider" && k != "for_each" && k != "lifecycle" && k != "depends_on" {
 								tfResource.Properties[k] = v
 							}
 						}
