@@ -64,37 +64,6 @@ type terraformProvider struct {
 	Version    string
 }
 
-func buildProvider(path string, name string, d model.Document) (terraformProvider, error) {
-	var tfProvider terraformProvider
-	tfProvider.Path = path
-	tfProvider.Name = name
-	tfProvider.Properties = make(map[string]interface{})
-
-	for k, v := range d {
-		// The starting line number for a provider is stored in "_kics__default"
-		if k == "_kics_lines" {
-			// TODO: Fix line number check
-			//tfProvider.StartLine = v.(map[string]interface{})["_kics__default"].(map[string]model.LineObject)["_kics_line"]
-			tfProvider.StartLine = 999
-		}
-
-		if k == "alias" {
-			tfProvider.Alias = v.(string)
-		}
-
-		if k == "version" {
-			tfProvider.Version = v.(string)
-		}
-
-		// Avoid adding _kicks properties and meta-arguments directly
-		if !strings.HasPrefix(k, "_kics") && k != "alias" && k != "version" {
-			tfProvider.Properties[k] = v
-		}
-	}
-
-	return tfProvider, nil
-}
-
 func listProviders(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	// The path comes from a parent hydate, defaulting to the config paths or
 	// available by the optional key column
@@ -163,4 +132,35 @@ func listProviders(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 	}
 
 	return nil, nil
+}
+
+func buildProvider(path string, name string, d model.Document) (terraformProvider, error) {
+	var tfProvider terraformProvider
+	tfProvider.Path = path
+	tfProvider.Name = name
+	tfProvider.Properties = make(map[string]interface{})
+
+	for k, v := range d {
+		// The starting line number for a provider is stored in "_kics__default"
+		if k == "_kics_lines" {
+			// TODO: Fix line number check
+			//tfProvider.StartLine = v.(map[string]interface{})["_kics__default"].(map[string]model.LineObject)["_kics_line"]
+			tfProvider.StartLine = 999
+		}
+
+		if k == "alias" {
+			tfProvider.Alias = v.(string)
+		}
+
+		if k == "version" {
+			tfProvider.Version = v.(string)
+		}
+
+		// Avoid adding _kicks properties and meta-arguments directly
+		if !strings.HasPrefix(k, "_kics") && k != "alias" && k != "version" {
+			tfProvider.Properties[k] = v
+		}
+	}
+
+	return tfProvider, nil
 }

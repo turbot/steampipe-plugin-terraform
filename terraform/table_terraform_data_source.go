@@ -13,13 +13,13 @@ import (
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
 
-func tableTerraformResource(ctx context.Context) *plugin.Table {
+func tableTerraformDataSource(ctx context.Context) *plugin.Table {
 	return &plugin.Table{
-		Name:        "terraform_resource",
-		Description: "Terraform resource information.",
+		Name:        "terraform_data source",
+		Description: "Terraform data source information.",
 		List: &plugin.ListConfig{
 			ParentHydrate: tfConfigList,
-			Hydrate:       listResources,
+			Hydrate:       listDataSources,
 			KeyColumns:    plugin.OptionalColumns([]string{"path"}),
 		},
 		Columns: []*plugin.Column{
@@ -30,12 +30,12 @@ func tableTerraformResource(ctx context.Context) *plugin.Table {
 			},
 			{
 				Name:        "name",
-				Description: "Resource name.",
+				Description: "DataSource name.",
 				Type:        proto.ColumnType_STRING,
 			},
 			{
 				Name:        "type",
-				Description: "Resource type.",
+				Description: "DataSource type.",
 				Type:        proto.ColumnType_STRING,
 			},
 			{
@@ -45,12 +45,12 @@ func tableTerraformResource(ctx context.Context) *plugin.Table {
 			},
 			{
 				Name:        "properties",
-				Description: "Resource properties.",
+				Description: "DataSource properties.",
 				Type:        proto.ColumnType_JSON,
 			},
 			{
 				Name:        "count",
-				Description: "The count meta-argument accepts a whole number, and creates that many instances of the resource or module.",
+				Description: "The count meta-argument accepts a whole number, and creates that many instances of the data source or module.",
 				Type:        proto.ColumnType_INT,
 			},
 			{
@@ -60,24 +60,19 @@ func tableTerraformResource(ctx context.Context) *plugin.Table {
 			},
 			{
 				Name:        "depends_on",
-				Description: "Use the depends_on meta-argument to handle hidden resource or module dependencies that Terraform can't automatically infer.",
-				Type:        proto.ColumnType_JSON,
-			},
-			{
-				Name:        "lifecycle",
-				Description: "The lifecycle meta-argument is a nested block that can appear within a resource block.",
+				Description: "Use the depends_on meta-argument to handle hidden data source or module dependencies that Terraform can't automatically infer.",
 				Type:        proto.ColumnType_JSON,
 			},
 			{
 				Name:        "provider",
-				Description: "The provider meta-argument specifies which provider configuration to use for a resource, overriding Terraform's default behavior of selecting one based on the resource type name.",
+				Description: "The provider meta-argument specifies which provider configuration to use for a data source, overriding Terraform's default behavior of selecting one based on the data source type name.",
 				Type:        proto.ColumnType_STRING,
 			},
 		},
 	}
 }
 
-type terraformResource struct {
+type terraformDataSource struct {
 	Name       string
 	Type       string
 	Path       string
@@ -86,12 +81,11 @@ type terraformResource struct {
 	DependsOn  []string
 	Count      int
 	ForEach    map[string]interface{}
-	// A resource's provider arg will always reference a provider block
-	Provider  string
-	Lifecycle map[string]interface{}
+	// A data source's provider arg will always reference a provider block
+	Provider string
 }
 
-func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func listDataSources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	// The path comes from a parent hydate, defaulting to the config paths or
 	// available by the optional key column
 	path := h.Item.(filePath).Path
@@ -106,7 +100,7 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 		return nil, err
 	}
 
-	var tfResource terraformResource
+	var tfDataSource terraformDataSource
 
 	for _, parser := range combinedParser {
 		docs, _, err := parser.Parse(path, content)
@@ -115,17 +109,19 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 		}
 
 		for _, doc := range docs {
-			if doc["resource"] != nil {
-				// Resources are grouped by resource type
-				for resourceType, resources := range doc["resource"].(model.Document) {
-					plugin.Logger(ctx).Warn("Resource:", resources)
-					// For each resource, scan its properties
-					for resourceName, resourceData := range resources.(model.Document) {
-						tfResource, err = buildResource(path, resourceType, resourceName, resourceData.(model.Document))
+			if doc["data"] != nil {
+				// Data sources are grouped by data source type
+				for dataSourceType, dataSources := range doc["data"].(model.Document) {
+					plugin.Logger(ctx).Warn("Data source:", dataSources)
+					tfDataSource.Path = path
+					tfDataSource.Type = dataSourceType
+					// For each dataSource, scan its properties
+					for dataSourceName, dataSourceData := range dataSources.(model.Document) {
+						tfDataSource, err = buildDataSource(path, dataSourceType, dataSourceName, dataSourceData.(model.Document))
 						if err != nil {
 							panic(err)
 						}
-						d.StreamListItem(ctx, tfResource)
+						d.StreamListItem(ctx, tfDataSource)
 					}
 				}
 			}
@@ -135,21 +131,20 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 	return nil, nil
 }
 
-func buildResource(path string, resourceType string, name string, d model.Document) (terraformResource, error) {
-	var tfResource terraformResource
+func buildDataSource(path string, dataSourceType string, name string, d model.Document) (terraformDataSource, error) {
+	var tfDataSource terraformDataSource
 
-	tfResource.Path = path
-	tfResource.Type = resourceType
-	tfResource.Name = name
-	tfResource.Properties = make(map[string]interface{})
-	tfResource.Lifecycle = make(map[string]interface{})
+	tfDataSource.Path = path
+	tfDataSource.Type = dataSourceType
+	tfDataSource.Name = name
+	tfDataSource.Properties = make(map[string]interface{})
 
 	for k, v := range d {
 		// The starting line number for a resource is stored in "_kics__default"
 		if k == "_kics_lines" {
 			// TODO: Fix line number check
-			//tfResource.StartLine = v.(map[string]interface{})["_kics__default"].(map[string]model.LineObject)["_kics_line"]
-			tfResource.StartLine = 999
+			//tfDataSource.StartLine = v.(map[string]interface{})["_kics__default"].(map[string]model.LineObject)["_kics_line"]
+			tfDataSource.StartLine = 999
 		}
 
 		if k == "count" {
@@ -159,23 +154,15 @@ func buildResource(path string, resourceType string, name string, d model.Docume
 				// TODO: Return error normally instead
 				panic(err)
 			}
-			tfResource.Count = countVal
+			tfDataSource.Count = countVal
 		}
 
 		if k == "provider" {
-			tfResource.Provider = v.(string)
+			tfDataSource.Provider = v.(string)
 		}
 
 		if k == "for_each" {
-			tfResource.ForEach = v.(model.Document)
-		}
-
-		if k == "lifecycle" {
-			for k, v := range v.(model.Document) {
-				if !strings.HasPrefix(k, "_kics") {
-					tfResource.Lifecycle[k] = v
-				}
-			}
+			tfDataSource.ForEach = v.(model.Document)
 		}
 
 		if k == "depends_on" {
@@ -184,13 +171,13 @@ func buildResource(path string, resourceType string, name string, d model.Docume
 			for i, v := range interfaces {
 				s[i] = fmt.Sprint(v)
 			}
-			tfResource.DependsOn = s
+			tfDataSource.DependsOn = s
 		}
 
 		// Avoid adding _kicks properties and meta-arguments directly
 		if !strings.HasPrefix(k, "_kics") && k != "count" && k != "provider" && k != "for_each" && k != "lifecycle" && k != "depends_on" {
-			tfResource.Properties[k] = v
+			tfDataSource.Properties[k] = v
 		}
 	}
-	return tfResource, nil
+	return tfDataSource, nil
 }
