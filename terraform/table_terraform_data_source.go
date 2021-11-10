@@ -175,6 +175,7 @@ func buildDataSource(path string, dataSourceType string, name string, d model.Do
 		}
 
 		// Avoid adding _kicks properties and meta-arguments directly
+		// TODO: Handle map type properties to avoid including _kics properties
 		if !strings.HasPrefix(k, "_kics") && k != "count" && k != "provider" && k != "for_each" && k != "lifecycle" && k != "depends_on" {
 			tfDataSource.Properties[k] = v
 		}

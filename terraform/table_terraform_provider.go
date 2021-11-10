@@ -157,6 +157,7 @@ func buildProvider(path string, name string, d model.Document) (terraformProvide
 		}
 
 		// Avoid adding _kicks properties and meta-arguments directly
+		// TODO: Handle map type properties to avoid including _kics properties
 		if !strings.HasPrefix(k, "_kics") && k != "alias" && k != "version" {
 			tfProvider.Properties[k] = v
 		}
