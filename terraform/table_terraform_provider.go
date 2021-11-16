@@ -102,7 +102,7 @@ func listProviders(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 					case []interface{}:
 						for _, providerData := range providers.([]interface{}) {
 							// For each provider, scan its properties
-							tfProvider, err = buildProvider(path, providerName, providerData.(model.Document))
+							tfProvider, err = buildProvider(ctx, path, providerName, providerData.(model.Document))
 							if err != nil {
 								panic(err)
 							}
@@ -113,8 +113,7 @@ func listProviders(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 						// If only 1 provider has the name, a model.Document is returned
 					case model.Document:
 						// For each provider, scan its properties
-						//tfProvider, err = buildProvider(path, providerName, providers.(model.Document))
-						tfProvider, err = buildProvider(path, providerName, providers.(model.Document))
+						tfProvider, err = buildProvider(ctx, path, providerName, providers.(model.Document))
 						if err != nil {
 							panic(err)
 						}
@@ -134,18 +133,18 @@ func listProviders(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 	return nil, nil
 }
 
-func buildProvider(path string, name string, d model.Document) (terraformProvider, error) {
+func buildProvider(ctx context.Context, path string, name string, d model.Document) (terraformProvider, error) {
 	var tfProvider terraformProvider
 	tfProvider.Path = path
 	tfProvider.Name = name
 	tfProvider.Properties = make(map[string]interface{})
 
 	for k, v := range d {
-		// The starting line number for a provider is stored in "_kics__default"
+		// The starting line number is stored in "_kics__default"
 		if k == "_kics_lines" {
-			// TODO: Fix line number check
-			//tfProvider.StartLine = v.(map[string]interface{})["_kics__default"].(map[string]model.LineObject)["_kics_line"]
-			tfProvider.StartLine = 999
+			linesMap := v.(map[string]model.LineObject)
+			defaultLine := linesMap["_kics__default"]
+			tfProvider.StartLine = defaultLine.Line
 		}
 
 		if k == "alias" {

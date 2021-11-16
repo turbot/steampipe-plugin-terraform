@@ -100,7 +100,7 @@ func listOutputs(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData
 				// For each output, scan its properties
 				for outputName, outputData := range doc["output"].(model.Document) {
 					plugin.Logger(ctx).Warn("Output:", outputData)
-					tfOutput, err = buildOutput(path, outputName, outputData.(model.Document))
+					tfOutput, err = buildOutput(ctx, path, outputName, outputData.(model.Document))
 					if err != nil {
 						panic(err)
 					}
@@ -113,18 +113,18 @@ func listOutputs(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData
 	return nil, nil
 }
 
-func buildOutput(path string, name string, d model.Document) (terraformOutput, error) {
+func buildOutput(ctx context.Context, path string, name string, d model.Document) (terraformOutput, error) {
 	var tfOutput terraformOutput
 
 	tfOutput.Path = path
 	tfOutput.Name = name
 
 	for k, v := range d {
-		// The starting line number for a output is stored in "_kics__default"
+		// The starting line number is stored in "_kics__default"
 		if k == "_kics_lines" {
-			// TODO: Fix line number check
-			//tfOutput.StartLine = v.(map[string]interface{})["_kics__default"].(map[string]model.LineObject)["_kics_line"]
-			tfOutput.StartLine = 999
+			linesMap := v.(map[string]model.LineObject)
+			defaultLine := linesMap["_kics__default"]
+			tfOutput.StartLine = defaultLine.Line
 		}
 
 		if k == "description" {

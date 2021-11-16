@@ -117,7 +117,7 @@ func listDataSources(ctx context.Context, d *plugin.QueryData, h *plugin.Hydrate
 					tfDataSource.Type = dataSourceType
 					// For each dataSource, scan its properties
 					for dataSourceName, dataSourceData := range dataSources.(model.Document) {
-						tfDataSource, err = buildDataSource(path, dataSourceType, dataSourceName, dataSourceData.(model.Document))
+						tfDataSource, err = buildDataSource(ctx, path, dataSourceType, dataSourceName, dataSourceData.(model.Document))
 						if err != nil {
 							panic(err)
 						}
@@ -131,7 +131,7 @@ func listDataSources(ctx context.Context, d *plugin.QueryData, h *plugin.Hydrate
 	return nil, nil
 }
 
-func buildDataSource(path string, dataSourceType string, name string, d model.Document) (terraformDataSource, error) {
+func buildDataSource(ctx context.Context, path string, dataSourceType string, name string, d model.Document) (terraformDataSource, error) {
 	var tfDataSource terraformDataSource
 
 	tfDataSource.Path = path
@@ -140,11 +140,11 @@ func buildDataSource(path string, dataSourceType string, name string, d model.Do
 	tfDataSource.Properties = make(map[string]interface{})
 
 	for k, v := range d {
-		// The starting line number for a resource is stored in "_kics__default"
+		// The starting line number is stored in "_kics__default"
 		if k == "_kics_lines" {
-			// TODO: Fix line number check
-			//tfDataSource.StartLine = v.(map[string]interface{})["_kics__default"].(map[string]model.LineObject)["_kics_line"]
-			tfDataSource.StartLine = 999
+			linesMap := v.(map[string]model.LineObject)
+			defaultLine := linesMap["_kics__default"]
+			tfDataSource.StartLine = defaultLine.Line
 		}
 
 		if k == "count" {

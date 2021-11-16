@@ -121,7 +121,7 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 					plugin.Logger(ctx).Warn("Resource:", resources)
 					// For each resource, scan its properties
 					for resourceName, resourceData := range resources.(model.Document) {
-						tfResource, err = buildResource(path, resourceType, resourceName, resourceData.(model.Document))
+						tfResource, err = buildResource(ctx, path, resourceType, resourceName, resourceData.(model.Document))
 						if err != nil {
 							panic(err)
 						}
@@ -135,7 +135,7 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 	return nil, nil
 }
 
-func buildResource(path string, resourceType string, name string, d model.Document) (terraformResource, error) {
+func buildResource(ctx context.Context, path string, resourceType string, name string, d model.Document) (terraformResource, error) {
 	var tfResource terraformResource
 
 	tfResource.Path = path
@@ -144,12 +144,14 @@ func buildResource(path string, resourceType string, name string, d model.Docume
 	tfResource.Properties = make(map[string]interface{})
 	tfResource.Lifecycle = make(map[string]interface{})
 
+	// TODO: Use switch statement
+	// TODO: Can we return source code as well?
 	for k, v := range d {
-		// The starting line number for a resource is stored in "_kics__default"
+		// The starting line number is stored in "_kics__default"
 		if k == "_kics_lines" {
-			// TODO: Fix line number check
-			//tfResource.StartLine = v.(map[string]interface{})["_kics__default"].(map[string]model.LineObject)["_kics_line"]
-			tfResource.StartLine = 999
+			linesMap := v.(map[string]model.LineObject)
+			defaultLine := linesMap["_kics__default"]
+			tfResource.StartLine = defaultLine.Line
 		}
 
 		if k == "count" {
