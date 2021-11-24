@@ -48,6 +48,7 @@ func tableTerraformResource(ctx context.Context) *plugin.Table {
 				Description: "Resource properties.",
 				Type:        proto.ColumnType_JSON,
 			},
+			// Meta-arguments
 			{
 				Name:        "count",
 				Description: "The count meta-argument accepts a whole number, and creates that many instances of the resource or module.",
@@ -144,15 +145,18 @@ func buildResource(ctx context.Context, path string, resourceType string, name s
 	tfResource.Properties = make(map[string]interface{})
 	tfResource.Lifecycle = make(map[string]interface{})
 
+	// The starting line number is stored in "_kics__default"
+	kicsLines := d["_kics_lines"]
+	linesMap := kicsLines.(map[string]model.LineObject)
+	defaultLine := linesMap["_kics__default"]
+	tfResource.StartLine = defaultLine.Line
+
+	// Remove all "_kics" properties
+	sanitizeDocument(d)
+
 	// TODO: Can we return source code as well?
 	for k, v := range d {
 		switch k {
-		// The starting line number is stored in "_kics__default"
-		case "_kics_lines":
-			linesMap := v.(map[string]model.LineObject)
-			defaultLine := linesMap["_kics__default"]
-			tfResource.StartLine = defaultLine.Line
-
 		case "count":
 			var countVal int
 			err := gocty.FromCtyValue(v.(ctyjson.SimpleJSONValue).Value, &countVal)
@@ -183,12 +187,9 @@ func buildResource(ctx context.Context, path string, resourceType string, name s
 			}
 			tfResource.DependsOn = s
 
-		// Avoid adding _kicks properties and meta-arguments directly
-		// TODO: Handle map type properties to avoid including _kics properties
+		// It's safe to add any remaining properties since we've already removed all "_kics" properties
 		default:
-			if !strings.HasPrefix(k, "_kics") {
-				tfResource.Properties[k] = v
-			}
+			tfResource.Properties[k] = v
 		}
 	}
 	return tfResource, nil

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/Checkmarx/kics/pkg/model"
 	"github.com/turbot/steampipe-plugin-sdk/grpc/proto"
@@ -30,12 +29,12 @@ func tableTerraformDataSource(ctx context.Context) *plugin.Table {
 			},
 			{
 				Name:        "name",
-				Description: "DataSource name.",
+				Description: "Data source name.",
 				Type:        proto.ColumnType_STRING,
 			},
 			{
 				Name:        "type",
-				Description: "DataSource type.",
+				Description: "Data source type.",
 				Type:        proto.ColumnType_STRING,
 			},
 			{
@@ -45,7 +44,7 @@ func tableTerraformDataSource(ctx context.Context) *plugin.Table {
 			},
 			{
 				Name:        "properties",
-				Description: "DataSource properties.",
+				Description: "Data source properties.",
 				Type:        proto.ColumnType_JSON,
 			},
 			{
@@ -139,14 +138,17 @@ func buildDataSource(ctx context.Context, path string, dataSourceType string, na
 	tfDataSource.Name = name
 	tfDataSource.Properties = make(map[string]interface{})
 
+	// The starting line number is stored in "_kics__default"
+	kicsLines := d["_kics_lines"]
+	linesMap := kicsLines.(map[string]model.LineObject)
+	defaultLine := linesMap["_kics__default"]
+	tfDataSource.StartLine = defaultLine.Line
+
+	// Remove all "_kics" properties
+	sanitizeDocument(d)
+
 	for k, v := range d {
 		switch k {
-		// The starting line number is stored in "_kics__default"
-		case "_kics_lines":
-			linesMap := v.(map[string]model.LineObject)
-			defaultLine := linesMap["_kics__default"]
-			tfDataSource.StartLine = defaultLine.Line
-
 		case "count":
 			var countVal int
 			err := gocty.FromCtyValue(v.(ctyjson.SimpleJSONValue).Value, &countVal)
@@ -170,12 +172,9 @@ func buildDataSource(ctx context.Context, path string, dataSourceType string, na
 			}
 			tfDataSource.DependsOn = s
 
-		// Avoid adding _kicks properties and meta-arguments directly
-		// TODO: Handle map type properties to avoid including _kics properties
+		// It's safe to add any remaining properties since we've already removed all "_kics" properties
 		default:
-			if !strings.HasPrefix(k, "_kics") {
-				tfDataSource.Properties[k] = v
-			}
+			tfDataSource.Properties[k] = v
 		}
 	}
 	return tfDataSource, nil

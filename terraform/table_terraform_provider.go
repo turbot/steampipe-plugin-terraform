@@ -3,7 +3,6 @@ package terraform
 import (
 	"context"
 	"os"
-	"strings"
 
 	"github.com/Checkmarx/kics/pkg/model"
 	"github.com/turbot/steampipe-plugin-sdk/grpc/proto"
@@ -139,26 +138,26 @@ func buildProvider(ctx context.Context, path string, name string, d model.Docume
 	tfProvider.Name = name
 	tfProvider.Properties = make(map[string]interface{})
 
+	// The starting line number is stored in "_kics__default"
+	kicsLines := d["_kics_lines"]
+	linesMap := kicsLines.(map[string]model.LineObject)
+	defaultLine := linesMap["_kics__default"]
+	tfProvider.StartLine = defaultLine.Line
+
+	// Remove all "_kics" properties
+	sanitizeDocument(d)
+
 	for k, v := range d {
 		switch k {
-		// The starting line number is stored in "_kics__default"
-		case "_kics_lines":
-			linesMap := v.(map[string]model.LineObject)
-			defaultLine := linesMap["_kics__default"]
-			tfProvider.StartLine = defaultLine.Line
-
 		case "alias":
 			tfProvider.Alias = v.(string)
 
 		case "version":
 			tfProvider.Version = v.(string)
 
-		// Avoid adding _kicks properties and meta-arguments directly
-		// TODO: Handle map type properties to avoid including _kics properties
+		// It's safe to add any remaining properties since we've already removed all "_kics" properties
 		default:
-			if !strings.HasPrefix(k, "_kics") {
-				tfProvider.Properties[k] = v
-			}
+			tfProvider.Properties[k] = v
 		}
 	}
 
