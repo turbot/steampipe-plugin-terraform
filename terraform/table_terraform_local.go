@@ -131,7 +131,7 @@ func buildLocal(ctx context.Context, path string, name string, value interface{}
 	defaultLine := lineMap[lineKey]
 	tfLocal.StartLine = defaultLine.Line
 
-	// Remove all "_kics" properties
+	// Remove all "_kics" arguments
 	sanitizeDocument(d)
 
 	return tfLocal, nil

@@ -99,7 +99,7 @@ func Parser() ([]*parser.Parser, error) {
 	return combinedParser, nil
 }
 
-// Remove all "_kics" properties to avoid noisy data
+// Remove all "_kics" arguments to avoid noisy data
 func sanitizeDocument(d model.Document) {
 	// Deep sanitize
 	for k, v := range d {
@@ -111,7 +111,7 @@ func sanitizeDocument(d model.Document) {
 			sanitizeDocument(v.(model.Document))
 		}
 
-		// Some map properties are returned as "[]interface {}" types from the parser
+		// Some map arguments are returned as "[]interface {}" types from the parser
 		if reflect.TypeOf(v).String() == "[]interface {}" {
 			for _, v := range v.([]interface{}) {
 				if reflect.TypeOf(v).String() == "model.Document" {

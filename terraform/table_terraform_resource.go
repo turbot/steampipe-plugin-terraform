@@ -44,8 +44,8 @@ func tableTerraformResource(ctx context.Context) *plugin.Table {
 				Type:        proto.ColumnType_INT,
 			},
 			{
-				Name:        "properties",
-				Description: "Resource properties.",
+				Name:        "arguments",
+				Description: "Resource arguments.",
 				Type:        proto.ColumnType_JSON,
 			},
 			// Meta-arguments
@@ -79,14 +79,14 @@ func tableTerraformResource(ctx context.Context) *plugin.Table {
 }
 
 type terraformResource struct {
-	Name       string
-	Type       string
-	Path       string
-	StartLine  int
-	Properties map[string]interface{}
-	DependsOn  []string
-	Count      int
-	ForEach    map[string]interface{}
+	Name      string
+	Type      string
+	Path      string
+	StartLine int
+	Arguments map[string]interface{}
+	DependsOn []string
+	Count     int
+	ForEach   map[string]interface{}
 	// A resource's provider arg will always reference a provider block
 	Provider  string
 	Lifecycle map[string]interface{}
@@ -120,7 +120,7 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 				// Resources are grouped by resource type
 				for resourceType, resources := range doc["resource"].(model.Document) {
 					plugin.Logger(ctx).Warn("Resource:", resources)
-					// For each resource, scan its properties
+					// For each resource, scan its arguments
 					for resourceName, resourceData := range resources.(model.Document) {
 						tfResource, err = buildResource(ctx, path, resourceType, resourceName, resourceData.(model.Document))
 						if err != nil {
@@ -142,7 +142,7 @@ func buildResource(ctx context.Context, path string, resourceType string, name s
 	tfResource.Path = path
 	tfResource.Type = resourceType
 	tfResource.Name = name
-	tfResource.Properties = make(map[string]interface{})
+	tfResource.Arguments = make(map[string]interface{})
 	tfResource.Lifecycle = make(map[string]interface{})
 
 	// The starting line number is stored in "_kics__default"
@@ -151,7 +151,7 @@ func buildResource(ctx context.Context, path string, resourceType string, name s
 	defaultLine := linesMap["_kics__default"]
 	tfResource.StartLine = defaultLine.Line
 
-	// Remove all "_kics" properties
+	// Remove all "_kics" arguments
 	sanitizeDocument(d)
 
 	// TODO: Can we return source code as well?
@@ -187,9 +187,9 @@ func buildResource(ctx context.Context, path string, resourceType string, name s
 			}
 			tfResource.DependsOn = s
 
-		// It's safe to add any remaining properties since we've already removed all "_kics" properties
+		// It's safe to add any remaining arguments since we've already removed all "_kics" arguments
 		default:
-			tfResource.Properties[k] = v
+			tfResource.Arguments[k] = v
 		}
 	}
 	return tfResource, nil

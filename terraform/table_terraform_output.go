@@ -101,7 +101,7 @@ func listOutputs(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData
 
 		for _, doc := range docs {
 			if doc["output"] != nil {
-				// For each output, scan its properties
+				// For each output, scan its arguments
 				for outputName, outputData := range doc["output"].(model.Document) {
 					plugin.Logger(ctx).Warn("Output:", outputData)
 					tfOutput, err = buildOutput(ctx, path, outputName, outputData.(model.Document))
@@ -129,7 +129,7 @@ func buildOutput(ctx context.Context, path string, name string, d model.Document
 	defaultLine := linesMap["_kics__default"]
 	tfOutput.StartLine = defaultLine.Line
 
-	// Remove all "_kics" properties
+	// Remove all "_kics" arguments
 	sanitizeDocument(d)
 
 	for k, v := range d {

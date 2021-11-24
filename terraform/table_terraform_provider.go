@@ -35,8 +35,8 @@ func tableTerraformProvider(ctx context.Context) *plugin.Table {
 				Type:        proto.ColumnType_INT,
 			},
 			{
-				Name:        "properties",
-				Description: "Provider properties.",
+				Name:        "arguments",
+				Description: "Provider arguments.",
 				Type:        proto.ColumnType_JSON,
 			},
 			{
@@ -55,12 +55,12 @@ func tableTerraformProvider(ctx context.Context) *plugin.Table {
 }
 
 type terraformProvider struct {
-	Name       string
-	Path       string
-	StartLine  int
-	Properties map[string]interface{}
-	Alias      string
-	Version    string
+	Name      string
+	Path      string
+	StartLine int
+	Arguments map[string]interface{}
+	Alias     string
+	Version   string
 }
 
 func listProviders(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
@@ -100,7 +100,7 @@ func listProviders(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 					switch providerType := providers.(type) {
 					case []interface{}:
 						for _, providerData := range providers.([]interface{}) {
-							// For each provider, scan its properties
+							// For each provider, scan its arguments
 							tfProvider, err = buildProvider(ctx, path, providerName, providerData.(model.Document))
 							if err != nil {
 								panic(err)
@@ -111,7 +111,7 @@ func listProviders(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 
 						// If only 1 provider has the name, a model.Document is returned
 					case model.Document:
-						// For each provider, scan its properties
+						// For each provider, scan its arguments
 						tfProvider, err = buildProvider(ctx, path, providerName, providers.(model.Document))
 						if err != nil {
 							panic(err)
@@ -136,7 +136,7 @@ func buildProvider(ctx context.Context, path string, name string, d model.Docume
 	var tfProvider terraformProvider
 	tfProvider.Path = path
 	tfProvider.Name = name
-	tfProvider.Properties = make(map[string]interface{})
+	tfProvider.Arguments = make(map[string]interface{})
 
 	// The starting line number is stored in "_kics__default"
 	kicsLines := d["_kics_lines"]
@@ -144,7 +144,7 @@ func buildProvider(ctx context.Context, path string, name string, d model.Docume
 	defaultLine := linesMap["_kics__default"]
 	tfProvider.StartLine = defaultLine.Line
 
-	// Remove all "_kics" properties
+	// Remove all "_kics" arguments
 	sanitizeDocument(d)
 
 	for k, v := range d {
@@ -155,9 +155,9 @@ func buildProvider(ctx context.Context, path string, name string, d model.Docume
 		case "version":
 			tfProvider.Version = v.(string)
 
-		// It's safe to add any remaining properties since we've already removed all "_kics" properties
+		// It's safe to add any remaining arguments since we've already removed all "_kics" arguments
 		default:
-			tfProvider.Properties[k] = v
+			tfProvider.Arguments[k] = v
 		}
 	}
 

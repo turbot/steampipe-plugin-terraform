@@ -21,10 +21,9 @@ Run a query:
 
 ```sql
 select
-  path,
   name,
   type,
-  properties
+  arguments
 from
   terraform_resource;
 ```

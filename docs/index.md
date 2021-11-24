@@ -20,19 +20,11 @@ Query data from the `my_users.tf` file:
 
 ```sql
 select
-  first_name,
-  last_name
+  name,
+  type,
+  arguments
 from
-  my_users
-```
-
-```
-+------------+-----------+
-| first_name | last_name |
-+------------+-----------+
-| Michael    | Scott     |
-| Dwight     | Schrute   |
-+------------+-----------+
+  terraform_resource;
 ```
 
 ## Documentation
@@ -69,4 +61,4 @@ connection "terraform" {
 ## Get involved
 
 - Open source: https://github.com/turbot/steampipe-plugin-terraform
-- Community: [Slack Channel](https://join.slack.com/t/steampipe/shared_invite/zt-oij778tv-lYyRTWOTMQYBVAbtPSWs3g)
+- Community: [Slack Channel](https://steampipe.io/community/join)

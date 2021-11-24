@@ -43,8 +43,8 @@ func tableTerraformDataSource(ctx context.Context) *plugin.Table {
 				Type:        proto.ColumnType_INT,
 			},
 			{
-				Name:        "properties",
-				Description: "Data source properties.",
+				Name:        "arguments",
+				Description: "Data source arguments.",
 				Type:        proto.ColumnType_JSON,
 			},
 			{
@@ -72,14 +72,14 @@ func tableTerraformDataSource(ctx context.Context) *plugin.Table {
 }
 
 type terraformDataSource struct {
-	Name       string
-	Type       string
-	Path       string
-	StartLine  int
-	Properties map[string]interface{}
-	DependsOn  []string
-	Count      int
-	ForEach    map[string]interface{}
+	Name      string
+	Type      string
+	Path      string
+	StartLine int
+	Arguments map[string]interface{}
+	DependsOn []string
+	Count     int
+	ForEach   map[string]interface{}
 	// A data source's provider arg will always reference a provider block
 	Provider string
 }
@@ -114,7 +114,7 @@ func listDataSources(ctx context.Context, d *plugin.QueryData, h *plugin.Hydrate
 					plugin.Logger(ctx).Warn("Data source:", dataSources)
 					tfDataSource.Path = path
 					tfDataSource.Type = dataSourceType
-					// For each dataSource, scan its properties
+					// For each dataSource, scan its arguments
 					for dataSourceName, dataSourceData := range dataSources.(model.Document) {
 						tfDataSource, err = buildDataSource(ctx, path, dataSourceType, dataSourceName, dataSourceData.(model.Document))
 						if err != nil {
@@ -136,7 +136,7 @@ func buildDataSource(ctx context.Context, path string, dataSourceType string, na
 	tfDataSource.Path = path
 	tfDataSource.Type = dataSourceType
 	tfDataSource.Name = name
-	tfDataSource.Properties = make(map[string]interface{})
+	tfDataSource.Arguments = make(map[string]interface{})
 
 	// The starting line number is stored in "_kics__default"
 	kicsLines := d["_kics_lines"]
@@ -144,7 +144,7 @@ func buildDataSource(ctx context.Context, path string, dataSourceType string, na
 	defaultLine := linesMap["_kics__default"]
 	tfDataSource.StartLine = defaultLine.Line
 
-	// Remove all "_kics" properties
+	// Remove all "_kics" arguments
 	sanitizeDocument(d)
 
 	for k, v := range d {
@@ -172,9 +172,9 @@ func buildDataSource(ctx context.Context, path string, dataSourceType string, na
 			}
 			tfDataSource.DependsOn = s
 
-		// It's safe to add any remaining properties since we've already removed all "_kics" properties
+		// It's safe to add any remaining arguments since we've already removed all "_kics" arguments
 		default:
-			tfDataSource.Properties[k] = v
+			tfDataSource.Arguments[k] = v
 		}
 	}
 	return tfDataSource, nil
