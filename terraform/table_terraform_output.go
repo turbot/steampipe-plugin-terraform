@@ -120,18 +120,17 @@ func buildOutput(ctx context.Context, path string, name string, d model.Document
 	tfOutput.Name = name
 
 	for k, v := range d {
+		switch k {
 		// The starting line number is stored in "_kics__default"
-		if k == "_kics_lines" {
+		case "_kics_lines":
 			linesMap := v.(map[string]model.LineObject)
 			defaultLine := linesMap["_kics__default"]
 			tfOutput.StartLine = defaultLine.Line
-		}
 
-		if k == "description" {
+		case "description":
 			tfOutput.Description = v.(string)
-		}
 
-		if k == "value" {
+		case "value":
 			switch v.(type) {
 			// TODO: Can we always assume if SimpleJSONValue it's an int?
 			case ctyjson.SimpleJSONValue:
@@ -148,9 +147,8 @@ func buildOutput(ctx context.Context, path string, name string, d model.Document
 			default:
 				tfOutput.Value = v.(string)
 			}
-		}
 
-		if k == "sensitive" {
+		case "sensitive":
 			var sensitiveVal bool
 			err := gocty.FromCtyValue(v.(ctyjson.SimpleJSONValue).Value, &sensitiveVal)
 			if err != nil {
@@ -158,9 +156,8 @@ func buildOutput(ctx context.Context, path string, name string, d model.Document
 				panic(err)
 			}
 			tfOutput.Sensitive = sensitiveVal
-		}
 
-		if k == "depends_on" {
+		case "depends_on":
 			interfaces := v.([]interface{})
 			s := make([]string, len(interfaces))
 			for i, v := range interfaces {
@@ -168,7 +165,6 @@ func buildOutput(ctx context.Context, path string, name string, d model.Document
 			}
 			tfOutput.DependsOn = s
 		}
-
 	}
 	return tfOutput, nil
 }

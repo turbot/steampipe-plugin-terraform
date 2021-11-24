@@ -140,14 +140,14 @@ func buildDataSource(ctx context.Context, path string, dataSourceType string, na
 	tfDataSource.Properties = make(map[string]interface{})
 
 	for k, v := range d {
+		switch k {
 		// The starting line number is stored in "_kics__default"
-		if k == "_kics_lines" {
+		case "_kics_lines":
 			linesMap := v.(map[string]model.LineObject)
 			defaultLine := linesMap["_kics__default"]
 			tfDataSource.StartLine = defaultLine.Line
-		}
 
-		if k == "count" {
+		case "count":
 			var countVal int
 			err := gocty.FromCtyValue(v.(ctyjson.SimpleJSONValue).Value, &countVal)
 			if err != nil {
@@ -155,29 +155,27 @@ func buildDataSource(ctx context.Context, path string, dataSourceType string, na
 				panic(err)
 			}
 			tfDataSource.Count = countVal
-		}
 
-		if k == "provider" {
+		case "provider":
 			tfDataSource.Provider = v.(string)
-		}
 
-		if k == "for_each" {
+		case "for_each":
 			tfDataSource.ForEach = v.(model.Document)
-		}
 
-		if k == "depends_on" {
+		case "depends_on":
 			interfaces := v.([]interface{})
 			s := make([]string, len(interfaces))
 			for i, v := range interfaces {
 				s[i] = fmt.Sprint(v)
 			}
 			tfDataSource.DependsOn = s
-		}
 
 		// Avoid adding _kicks properties and meta-arguments directly
 		// TODO: Handle map type properties to avoid including _kics properties
-		if !strings.HasPrefix(k, "_kics") && k != "count" && k != "provider" && k != "for_each" && k != "lifecycle" && k != "depends_on" {
-			tfDataSource.Properties[k] = v
+		default:
+			if !strings.HasPrefix(k, "_kics") {
+				tfDataSource.Properties[k] = v
+			}
 		}
 	}
 	return tfDataSource, nil

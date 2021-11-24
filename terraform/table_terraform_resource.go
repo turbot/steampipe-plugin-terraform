@@ -144,17 +144,16 @@ func buildResource(ctx context.Context, path string, resourceType string, name s
 	tfResource.Properties = make(map[string]interface{})
 	tfResource.Lifecycle = make(map[string]interface{})
 
-	// TODO: Use switch statement
 	// TODO: Can we return source code as well?
 	for k, v := range d {
+		switch k {
 		// The starting line number is stored in "_kics__default"
-		if k == "_kics_lines" {
+		case "_kics_lines":
 			linesMap := v.(map[string]model.LineObject)
 			defaultLine := linesMap["_kics__default"]
 			tfResource.StartLine = defaultLine.Line
-		}
 
-		if k == "count" {
+		case "count":
 			var countVal int
 			err := gocty.FromCtyValue(v.(ctyjson.SimpleJSONValue).Value, &countVal)
 			if err != nil {
@@ -162,37 +161,34 @@ func buildResource(ctx context.Context, path string, resourceType string, name s
 				panic(err)
 			}
 			tfResource.Count = countVal
-		}
 
-		if k == "provider" {
+		case "provider":
 			tfResource.Provider = v.(string)
-		}
 
-		if k == "for_each" {
+		case "for_each":
 			tfResource.ForEach = v.(model.Document)
-		}
 
-		if k == "lifecycle" {
+		case "lifecycle":
 			for k, v := range v.(model.Document) {
 				if !strings.HasPrefix(k, "_kics") {
 					tfResource.Lifecycle[k] = v
 				}
 			}
-		}
 
-		if k == "depends_on" {
+		case "depends_on":
 			interfaces := v.([]interface{})
 			s := make([]string, len(interfaces))
 			for i, v := range interfaces {
 				s[i] = fmt.Sprint(v)
 			}
 			tfResource.DependsOn = s
-		}
 
 		// Avoid adding _kicks properties and meta-arguments directly
 		// TODO: Handle map type properties to avoid including _kics properties
-		if !strings.HasPrefix(k, "_kics") && k != "count" && k != "provider" && k != "for_each" && k != "lifecycle" && k != "depends_on" {
-			tfResource.Properties[k] = v
+		default:
+			if !strings.HasPrefix(k, "_kics") {
+				tfResource.Properties[k] = v
+			}
 		}
 	}
 	return tfResource, nil

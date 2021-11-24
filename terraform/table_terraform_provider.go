@@ -140,25 +140,25 @@ func buildProvider(ctx context.Context, path string, name string, d model.Docume
 	tfProvider.Properties = make(map[string]interface{})
 
 	for k, v := range d {
+		switch k {
 		// The starting line number is stored in "_kics__default"
-		if k == "_kics_lines" {
+		case "_kics_lines":
 			linesMap := v.(map[string]model.LineObject)
 			defaultLine := linesMap["_kics__default"]
 			tfProvider.StartLine = defaultLine.Line
-		}
 
-		if k == "alias" {
+		case "alias":
 			tfProvider.Alias = v.(string)
-		}
 
-		if k == "version" {
+		case "version":
 			tfProvider.Version = v.(string)
-		}
 
 		// Avoid adding _kicks properties and meta-arguments directly
 		// TODO: Handle map type properties to avoid including _kics properties
-		if !strings.HasPrefix(k, "_kics") && k != "alias" && k != "version" {
-			tfProvider.Properties[k] = v
+		default:
+			if !strings.HasPrefix(k, "_kics") {
+				tfProvider.Properties[k] = v
+			}
 		}
 	}
 
