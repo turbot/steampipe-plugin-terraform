@@ -75,26 +75,45 @@ func listLocals(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData)
 
 		for _, doc := range docs {
 			if doc["locals"] != nil {
-				plugin.Logger(ctx).Warn("Local top level:", doc["locals"])
-				plugin.Logger(ctx).Warn("Local top level model:", doc["locals"].([]interface{}))
+				//plugin.Logger(ctx).Warn("Local top level:", doc["locals"])
 				// Locals are grouped by local blocks
-				for _, locals := range doc["locals"].([]interface{}) {
-					plugin.Logger(ctx).Warn("Locals:", locals)
-					// Get lines map to use when building each local row
-					linesMap := locals.(model.Document)["_kics_lines"].(map[string]model.LineObject)
+				switch localType := doc["locals"].(type) {
 
-					for localName, localValue := range locals.(model.Document) {
-						tfLocal, err = buildLocal(ctx, path, localName, localValue, locals.(model.Document), linesMap)
+				// If more than 1 local block is defined, an array of interfaces is returned
+				case []interface{}:
+					for _, locals := range doc["locals"].([]interface{}) {
+						//plugin.Logger(ctx).Warn("Locals:", locals)
+						// Get lines map to use when building each local row
+						linesMap := locals.(model.Document)["_kics_lines"].(map[string]model.LineObject)
+						for localName, localValue := range locals.(model.Document) {
+							tfLocal, err = buildLocal(ctx, path, localName, localValue, locals.(model.Document), linesMap)
+							if err != nil {
+								panic(err)
+							}
+							d.StreamListItem(ctx, tfLocal)
+						}
+					}
+
+				// If only 1 local block is defined, a model.Document is returned
+				case model.Document:
+					// Get lines map to use when building each local row
+					linesMap := doc["locals"].(model.Document)["_kics_lines"].(map[string]model.LineObject)
+					for localName, localValue := range doc["locals"].(model.Document) {
+						tfLocal, err = buildLocal(ctx, path, localName, localValue, doc["locals"].(model.Document), linesMap)
 						if err != nil {
 							panic(err)
 						}
 						d.StreamListItem(ctx, tfLocal)
 					}
+
+				default:
+					plugin.Logger(ctx).Warn("Unknown local type:", localType)
+					panic("Unexpected type")
 				}
+
 			}
 		}
 	}
-
 	return nil, nil
 }
 
