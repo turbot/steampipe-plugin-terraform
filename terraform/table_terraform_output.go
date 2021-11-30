@@ -83,11 +83,13 @@ func listOutputs(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData
 
 	combinedParser, err := Parser()
 	if err != nil {
+		plugin.Logger(ctx).Error("terraform_output.listOutputs", "create_parser_error", err)
 		return nil, err
 	}
 
 	content, err := os.ReadFile(path)
 	if err != nil {
+		plugin.Logger(ctx).Error("terraform_output.listOutputs", "read_file_error", err, "path", path)
 		return nil, err
 	}
 
@@ -96,7 +98,8 @@ func listOutputs(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData
 	for _, parser := range combinedParser {
 		docs, _, err := parser.Parse(path, content)
 		if err != nil {
-			panic(err)
+			plugin.Logger(ctx).Error("terraform_output.listOutputs", "parse_error", err, "path", path)
+			return nil, err
 		}
 
 		for _, doc := range docs {
@@ -106,7 +109,8 @@ func listOutputs(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData
 					plugin.Logger(ctx).Warn("Output:", outputData)
 					tfOutput, err = buildOutput(ctx, path, outputName, outputData.(model.Document))
 					if err != nil {
-						panic(err)
+						plugin.Logger(ctx).Error("terraform_output.listOutputs", "build_output_error", err)
+						return nil, err
 					}
 					d.StreamListItem(ctx, tfOutput)
 				}
@@ -154,8 +158,8 @@ func buildOutput(ctx context.Context, path string, name string, d model.Document
 				if err != nil {
 					plugin.Logger(ctx).Warn("Conv error:", err)
 					tfOutput.Value = "bad conversion"
-					// TODO: Return error normally instead
-					//panic(err)
+					// TODO: Re-enable error handling once conversions work
+					//return tfOutput, fmt.Errorf("Failed to resolve value argument for output%s: %w", name, err)
 				}
 				tfOutput.Value = strconv.Itoa(val)
 				break

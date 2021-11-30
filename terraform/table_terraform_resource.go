@@ -99,11 +99,13 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 
 	combinedParser, err := Parser()
 	if err != nil {
+		plugin.Logger(ctx).Error("terraform_resource.listResources", "create_parser_error", err)
 		return nil, err
 	}
 
 	content, err := os.ReadFile(path)
 	if err != nil {
+		plugin.Logger(ctx).Error("terraform_resource.listResources", "read_file_error", err, "path", path)
 		return nil, err
 	}
 
@@ -112,7 +114,8 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 	for _, parser := range combinedParser {
 		docs, _, err := parser.Parse(path, content)
 		if err != nil {
-			panic(err)
+			plugin.Logger(ctx).Error("terraform_resource.listResources", "parse_error", err, "path", path)
+			return nil, err
 		}
 
 		for _, doc := range docs {
@@ -124,7 +127,8 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 					for resourceName, resourceData := range resources.(model.Document) {
 						tfResource, err = buildResource(ctx, path, resourceType, resourceName, resourceData.(model.Document))
 						if err != nil {
-							panic(err)
+							plugin.Logger(ctx).Error("terraform_resource.listResources", "build_resource_error", err)
+							return nil, err
 						}
 						d.StreamListItem(ctx, tfResource)
 					}
@@ -161,8 +165,7 @@ func buildResource(ctx context.Context, path string, resourceType string, name s
 			var countVal int
 			err := gocty.FromCtyValue(v.(ctyjson.SimpleJSONValue).Value, &countVal)
 			if err != nil {
-				// TODO: Return error normally instead
-				panic(err)
+				return tfResource, fmt.Errorf("Failed to resolve count argument for resource %s: %w", name, err)
 			}
 			tfResource.Count = countVal
 

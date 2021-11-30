@@ -91,11 +91,13 @@ func listDataSources(ctx context.Context, d *plugin.QueryData, h *plugin.Hydrate
 
 	combinedParser, err := Parser()
 	if err != nil {
+		plugin.Logger(ctx).Error("terraform_data_source.listDataSources", "create_parser_error", err)
 		return nil, err
 	}
 
 	content, err := os.ReadFile(path)
 	if err != nil {
+		plugin.Logger(ctx).Error("terraform_data_source.listDataSources", "read_file_error", err, "path", path)
 		return nil, err
 	}
 
@@ -104,21 +106,23 @@ func listDataSources(ctx context.Context, d *plugin.QueryData, h *plugin.Hydrate
 	for _, parser := range combinedParser {
 		docs, _, err := parser.Parse(path, content)
 		if err != nil {
-			panic(err)
+			plugin.Logger(ctx).Error("terraform_data_source.listDataSources", "parse_error", err, "path", path)
+			return nil, err
 		}
 
 		for _, doc := range docs {
 			if doc["data"] != nil {
 				// Data sources are grouped by data source type
 				for dataSourceType, dataSources := range doc["data"].(model.Document) {
-					plugin.Logger(ctx).Warn("Data source:", dataSources)
+					//plugin.Logger(ctx).Warn("Data source:", dataSources)
 					tfDataSource.Path = path
 					tfDataSource.Type = dataSourceType
-					// For each dataSource, scan its arguments
+					// For each data source, scan its arguments
 					for dataSourceName, dataSourceData := range dataSources.(model.Document) {
 						tfDataSource, err = buildDataSource(ctx, path, dataSourceType, dataSourceName, dataSourceData.(model.Document))
 						if err != nil {
-							panic(err)
+							plugin.Logger(ctx).Error("terraform_data_source.listDataSources", "build_data_source_error", err)
+							return nil, err
 						}
 						d.StreamListItem(ctx, tfDataSource)
 					}
@@ -153,8 +157,7 @@ func buildDataSource(ctx context.Context, path string, dataSourceType string, na
 			var countVal int
 			err := gocty.FromCtyValue(v.(ctyjson.SimpleJSONValue).Value, &countVal)
 			if err != nil {
-				// TODO: Return error normally instead
-				panic(err)
+				return tfDataSource, fmt.Errorf("Failed to resolve count argument for data source %s: %w", name, err)
 			}
 			tfDataSource.Count = countVal
 

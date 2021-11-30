@@ -2,6 +2,7 @@ package terraform
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/Checkmarx/kics/pkg/model"
@@ -70,11 +71,13 @@ func listProviders(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 
 	combinedParser, err := Parser()
 	if err != nil {
+		plugin.Logger(ctx).Error("terraform_provider.listProviders", "create_parser_error", err)
 		return nil, err
 	}
 
 	content, err := os.ReadFile(path)
 	if err != nil {
+		plugin.Logger(ctx).Error("terraform_provider.listProviders", "read_file_error", err, "path", path)
 		return nil, err
 	}
 
@@ -83,7 +86,8 @@ func listProviders(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 	for _, parser := range combinedParser {
 		docs, _, err := parser.Parse(path, content)
 		if err != nil {
-			panic(err)
+			plugin.Logger(ctx).Error("terraform_provider.listProviders", "parse_error", err, "path", path)
+			return nil, err
 		}
 
 		for _, doc := range docs {
@@ -98,13 +102,11 @@ func listProviders(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 
 					// If more than 1 provider with the same name, an array of interfaces is returned
 					switch providerType := providers.(type) {
+
 					case []interface{}:
 						for _, providerData := range providers.([]interface{}) {
 							// For each provider, scan its arguments
-							tfProvider, err = buildProvider(ctx, path, providerName, providerData.(model.Document))
-							if err != nil {
-								panic(err)
-							}
+							tfProvider = buildProvider(ctx, path, providerName, providerData.(model.Document))
 							d.StreamListItem(ctx, tfProvider)
 						}
 						break
@@ -112,16 +114,13 @@ func listProviders(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 						// If only 1 provider has the name, a model.Document is returned
 					case model.Document:
 						// For each provider, scan its arguments
-						tfProvider, err = buildProvider(ctx, path, providerName, providers.(model.Document))
-						if err != nil {
-							panic(err)
-						}
+						tfProvider = buildProvider(ctx, path, providerName, providers.(model.Document))
 						d.StreamListItem(ctx, tfProvider)
 						break
 
 					default:
-						plugin.Logger(ctx).Warn("Type:", providerType)
-						panic("Unexpected type")
+						plugin.Logger(ctx).Error("terraform_provider.listProviders", "unknown provider type", providerType)
+						return nil, fmt.Errorf("Failed to list providers due to unknown type for provider %s", providerName)
 					}
 
 				}
@@ -132,7 +131,7 @@ func listProviders(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 	return nil, nil
 }
 
-func buildProvider(ctx context.Context, path string, name string, d model.Document) (terraformProvider, error) {
+func buildProvider(ctx context.Context, path string, name string, d model.Document) terraformProvider {
 	var tfProvider terraformProvider
 	tfProvider.Path = path
 	tfProvider.Name = name
@@ -140,9 +139,11 @@ func buildProvider(ctx context.Context, path string, name string, d model.Docume
 
 	// The starting line number is stored in "_kics__default"
 	kicsLines := d["_kics_lines"]
-	linesMap := kicsLines.(map[string]model.LineObject)
-	defaultLine := linesMap["_kics__default"]
-	tfProvider.StartLine = defaultLine.Line
+	if kicsLines != nil {
+		linesMap := kicsLines.(map[string]model.LineObject)
+		defaultLine := linesMap["_kics__default"]
+		tfProvider.StartLine = defaultLine.Line
+	}
 
 	// Remove all "_kics" arguments
 	sanitizeDocument(d)
@@ -161,5 +162,5 @@ func buildProvider(ctx context.Context, path string, name string, d model.Docume
 		}
 	}
 
-	return tfProvider, nil
+	return tfProvider
 }

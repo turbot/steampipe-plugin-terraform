@@ -57,11 +57,13 @@ func listLocals(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData)
 
 	combinedParser, err := Parser()
 	if err != nil {
+		plugin.Logger(ctx).Error("terraform_local.listLocals", "create_parser_error", err)
 		return nil, err
 	}
 
 	content, err := os.ReadFile(path)
 	if err != nil {
+		plugin.Logger(ctx).Error("terraform_local.listLocals", "read_file_error", err, "path", path)
 		return nil, err
 	}
 
@@ -70,7 +72,8 @@ func listLocals(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData)
 	for _, parser := range combinedParser {
 		docs, _, err := parser.Parse(path, content)
 		if err != nil {
-			panic(err)
+			plugin.Logger(ctx).Error("terraform_local.listLocals", "parse_error", err, "path", path)
+			return nil, err
 		}
 
 		for _, doc := range docs {
@@ -88,7 +91,8 @@ func listLocals(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData)
 						for localName, localValue := range locals.(model.Document) {
 							tfLocal, err = buildLocal(ctx, path, localName, localValue, locals.(model.Document), linesMap)
 							if err != nil {
-								panic(err)
+								plugin.Logger(ctx).Error("terraform_local.listLocals", "build_local_error", err)
+								return nil, err
 							}
 							d.StreamListItem(ctx, tfLocal)
 						}
@@ -101,7 +105,8 @@ func listLocals(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData)
 					for localName, localValue := range doc["locals"].(model.Document) {
 						tfLocal, err = buildLocal(ctx, path, localName, localValue, doc["locals"].(model.Document), linesMap)
 						if err != nil {
-							panic(err)
+							plugin.Logger(ctx).Error("terraform_local.listLocals", "build_local_error", err)
+							return nil, err
 						}
 						d.StreamListItem(ctx, tfLocal)
 					}
