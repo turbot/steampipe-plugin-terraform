@@ -192,7 +192,6 @@ func buildResource(ctx context.Context, path string, resourceType string, name s
 			}
 
 		case "depends_on":
-			plugin.Logger(ctx).Warn("Banana:", reflect.TypeOf(v).String())
 			if reflect.TypeOf(v).String() != "[]interface {}" {
 				return tfResource, fmt.Errorf("The 'depends_on' argument for resource '%s' must be of type list", name)
 			}
