@@ -112,7 +112,7 @@ func listLocals(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData)
 
 				default:
 					plugin.Logger(ctx).Error("terraform_local.listLocals", "unknown_type", localType)
-					return nil, fmt.Errorf("Failed to list locals due to unknown type")
+					return nil, fmt.Errorf("Failed to list locals in %s due to unknown type", path)
 				}
 
 			}

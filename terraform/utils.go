@@ -151,7 +151,7 @@ func convertExpressionValue(v interface{}) (valStr string, err error) {
 	case []interface{}:
 		var valStrs []string
 		for _, iValue := range v.([]interface{}) {
-			tempVal, err := convertValue(iValue)
+			tempVal, err := convertExpressionValue(iValue)
 			if err != nil {
 				return "", fmt.Errorf("Failed to convert []interface{} value %v: %w", v, err)
 			}
@@ -160,7 +160,7 @@ func convertExpressionValue(v interface{}) (valStr string, err error) {
 		valStr = fmt.Sprintf("[%s]", strings.Join(valStrs, ","))
 
 	default:
-		return "", fmt.Errorf("Failed to convert unknown type for value %v: %w", v, err)
+		return "", fmt.Errorf("Failed to convert due to unknown type for value %v: %w", v, err)
 	}
 	return valStr, nil
 }

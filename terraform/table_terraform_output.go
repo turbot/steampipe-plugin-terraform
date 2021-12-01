@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"reflect"
 
 	"github.com/Checkmarx/kics/pkg/model"
 	"github.com/turbot/steampipe-plugin-sdk/grpc/proto"
@@ -135,6 +136,9 @@ func buildOutput(ctx context.Context, path string, name string, d model.Document
 	for k, v := range d {
 		switch k {
 		case "description":
+			if reflect.TypeOf(v).String() != "string" {
+				return tfOutput, fmt.Errorf("The 'description' argument for output '%s' must be of type string", name)
+			}
 			tfOutput.Description = v.(string)
 
 		case "value":
@@ -146,14 +150,19 @@ func buildOutput(ctx context.Context, path string, name string, d model.Document
 			tfOutput.Value = valStr
 
 		case "sensitive":
+			// Numbers and bools are both parsed as SimpleJSONValue, so we type check
+			// through the gocty conversion error handling
 			var sensitiveVal bool
 			err := gocty.FromCtyValue(v.(ctyjson.SimpleJSONValue).Value, &sensitiveVal)
 			if err != nil {
-				return tfOutput, fmt.Errorf("Failed to resolve sensitive argument for output %s: %w", name, err)
+				return tfOutput, fmt.Errorf("Failed to resolve 'sensitive' argument for output '%s': %w", name, err)
 			}
 			tfOutput.Sensitive = sensitiveVal
 
 		case "depends_on":
+			if reflect.TypeOf(v).String() != "[]interface{}" {
+				return tfOutput, fmt.Errorf("The 'depends_on' argument for output '%s' must be of type list", name)
+			}
 			interfaces := v.([]interface{})
 			s := make([]string, len(interfaces))
 			for i, v := range interfaces {

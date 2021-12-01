@@ -4,13 +4,12 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 
 	"github.com/Checkmarx/kics/pkg/model"
 	"github.com/turbot/steampipe-plugin-sdk/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/plugin"
-	"github.com/zclconf/go-cty/cty/gocty"
-	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
 
 func tableTerraformResource(ctx context.Context) *plugin.Table {
@@ -52,7 +51,7 @@ func tableTerraformResource(ctx context.Context) *plugin.Table {
 			{
 				Name:        "count",
 				Description: "The count meta-argument accepts a whole number, and creates that many instances of the resource or module.",
-				Type:        proto.ColumnType_INT,
+				Type:        proto.ColumnType_JSON,
 			},
 			{
 				Name:        "for_each",
@@ -85,8 +84,8 @@ type terraformResource struct {
 	StartLine int
 	Arguments map[string]interface{}
 	DependsOn []string
-	Count     int
-	ForEach   map[string]interface{}
+	Count     string
+	ForEach   string
 	// A resource's provider arg will always reference a provider block
 	Provider  string
 	Lifecycle map[string]interface{}
@@ -161,20 +160,31 @@ func buildResource(ctx context.Context, path string, resourceType string, name s
 	for k, v := range d {
 		switch k {
 		case "count":
-			var countVal int
-			err := gocty.FromCtyValue(v.(ctyjson.SimpleJSONValue).Value, &countVal)
+			valStr, err := convertExpressionValue(v)
 			if err != nil {
-				return tfResource, fmt.Errorf("Failed to resolve count argument for resource %s: %w", name, err)
+				plugin.Logger(ctx).Error("terraform_resource.buildResource", "convert_count_error", err)
+				return tfResource, err
 			}
-			tfResource.Count = countVal
+			tfResource.Count = valStr
 
 		case "provider":
+			if reflect.TypeOf(v).String() != "string" {
+				return tfResource, fmt.Errorf("The 'provider' argument for resource '%s' must be of type string", name)
+			}
 			tfResource.Provider = v.(string)
 
 		case "for_each":
-			tfResource.ForEach = v.(model.Document)
+			valStr, err := convertExpressionValue(v)
+			if err != nil {
+				plugin.Logger(ctx).Error("terraform_resource.buildResource", "convert_for_each_error", err)
+				return tfResource, err
+			}
+			tfResource.ForEach = valStr
 
 		case "lifecycle":
+			if reflect.TypeOf(v).String() != "model.Document" {
+				return tfResource, fmt.Errorf("The 'lifecycle' argument for resource '%s' must be of type map", name)
+			}
 			for k, v := range v.(model.Document) {
 				if !strings.HasPrefix(k, "_kics") {
 					tfResource.Lifecycle[k] = v
@@ -182,6 +192,10 @@ func buildResource(ctx context.Context, path string, resourceType string, name s
 			}
 
 		case "depends_on":
+			plugin.Logger(ctx).Warn("Banana:", reflect.TypeOf(v).String())
+			if reflect.TypeOf(v).String() != "[]interface {}" {
+				return tfResource, fmt.Errorf("The 'depends_on' argument for resource '%s' must be of type list", name)
+			}
 			interfaces := v.([]interface{})
 			s := make([]string, len(interfaces))
 			for i, v := range interfaces {

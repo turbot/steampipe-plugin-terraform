@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"reflect"
 
 	"github.com/Checkmarx/kics/pkg/model"
 	"github.com/turbot/steampipe-plugin-sdk/grpc/proto"
@@ -100,7 +101,11 @@ func listProviders(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 					case []interface{}:
 						for _, providerData := range providers.([]interface{}) {
 							// For each provider, scan its arguments
-							tfProvider = buildProvider(ctx, path, providerName, providerData.(model.Document))
+							tfProvider, err = buildProvider(ctx, path, providerName, providerData.(model.Document))
+							if err != nil {
+								plugin.Logger(ctx).Error("terraform_provider.listProviders", "build_provider_error", err)
+								return nil, err
+							}
 							d.StreamListItem(ctx, tfProvider)
 						}
 						break
@@ -108,7 +113,11 @@ func listProviders(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 						// If only 1 provider has the name, a model.Document is returned
 					case model.Document:
 						// For each provider, scan its arguments
-						tfProvider = buildProvider(ctx, path, providerName, providers.(model.Document))
+						tfProvider, err = buildProvider(ctx, path, providerName, providers.(model.Document))
+						if err != nil {
+							plugin.Logger(ctx).Error("terraform_provider.listProviders", "build_provider_error", err)
+							return nil, err
+						}
 						d.StreamListItem(ctx, tfProvider)
 						break
 
@@ -125,7 +134,7 @@ func listProviders(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 	return nil, nil
 }
 
-func buildProvider(ctx context.Context, path string, name string, d model.Document) terraformProvider {
+func buildProvider(ctx context.Context, path string, name string, d model.Document) (terraformProvider, error) {
 	var tfProvider terraformProvider
 	tfProvider.Path = path
 	tfProvider.Name = name
@@ -145,9 +154,15 @@ func buildProvider(ctx context.Context, path string, name string, d model.Docume
 	for k, v := range d {
 		switch k {
 		case "alias":
+			if reflect.TypeOf(v).String() != "string" {
+				return tfProvider, fmt.Errorf("The 'alias' argument for provider '%s' must be of type string", name)
+			}
 			tfProvider.Alias = v.(string)
 
 		case "version":
+			if reflect.TypeOf(v).String() != "string" {
+				return tfProvider, fmt.Errorf("The 'version' argument for provider '%s' must be of type string", name)
+			}
 			tfProvider.Version = v.(string)
 
 		// It's safe to add any remaining arguments since we've already removed all "_kics" arguments
@@ -156,5 +171,5 @@ func buildProvider(ctx context.Context, path string, name string, d model.Docume
 		}
 	}
 
-	return tfProvider
+	return tfProvider, nil
 }

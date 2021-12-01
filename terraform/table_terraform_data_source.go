@@ -4,12 +4,11 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"reflect"
 
 	"github.com/Checkmarx/kics/pkg/model"
 	"github.com/turbot/steampipe-plugin-sdk/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/plugin"
-	"github.com/zclconf/go-cty/cty/gocty"
-	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
 
 func tableTerraformDataSource(ctx context.Context) *plugin.Table {
@@ -50,7 +49,7 @@ func tableTerraformDataSource(ctx context.Context) *plugin.Table {
 			{
 				Name:        "count",
 				Description: "The count meta-argument accepts a whole number, and creates that many instances of the data source or module.",
-				Type:        proto.ColumnType_INT,
+				Type:        proto.ColumnType_JSON,
 			},
 			{
 				Name:        "for_each",
@@ -78,8 +77,8 @@ type terraformDataSource struct {
 	StartLine int
 	Arguments map[string]interface{}
 	DependsOn []string
-	Count     int
-	ForEach   map[string]interface{}
+	Count     string
+	ForEach   string
 	// A data source's provider arg will always reference a provider block
 	Provider string
 }
@@ -153,20 +152,31 @@ func buildDataSource(ctx context.Context, path string, dataSourceType string, na
 	for k, v := range d {
 		switch k {
 		case "count":
-			var countVal int
-			err := gocty.FromCtyValue(v.(ctyjson.SimpleJSONValue).Value, &countVal)
+			valStr, err := convertExpressionValue(v)
 			if err != nil {
-				return tfDataSource, fmt.Errorf("Failed to resolve count argument for data source %s: %w", name, err)
+				plugin.Logger(ctx).Error("terraform_data_source.buildDataSource", "convert_count_error", err)
+				return tfDataSource, err
 			}
-			tfDataSource.Count = countVal
+			tfDataSource.Count = valStr
 
 		case "provider":
+			if reflect.TypeOf(v).String() != "string" {
+				return tfDataSource, fmt.Errorf("The 'provider' argument for data source '%s' must be of type string", name)
+			}
 			tfDataSource.Provider = v.(string)
 
 		case "for_each":
-			tfDataSource.ForEach = v.(model.Document)
+			valStr, err := convertExpressionValue(v)
+			if err != nil {
+				plugin.Logger(ctx).Error("terraform_data_source.buildDataSource", "convert_for_each_error", err)
+				return tfDataSource, err
+			}
+			tfDataSource.ForEach = valStr
 
 		case "depends_on":
+			if reflect.TypeOf(v).String() != "[]interface{}" {
+				return tfDataSource, fmt.Errorf("The 'depends_on' argument for data source '%s' must be of type list", name)
+			}
 			interfaces := v.([]interface{})
 			s := make([]string, len(interfaces))
 			for i, v := range interfaces {
