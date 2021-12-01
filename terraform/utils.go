@@ -121,26 +121,21 @@ func sanitizeDocument(d model.Document) {
 	}
 }
 
-// TODO: Handle errors better
-func convertValue(v interface{}) (val string, err error) {
-	var valStr string
-	var valStrs []string
-
+// For any arguments that can be a TF expression, convert to string for easier handling
+func convertExpressionValue(v interface{}) (valStr string, err error) {
 	switch v.(type) {
 	// Int, numbers, and bools
 	case ctyjson.SimpleJSONValue:
 		val, err := v.(ctyjson.SimpleJSONValue).MarshalJSON()
 		if err != nil {
-			valStr = "bad simple json conversion"
-			return valStr, err
+			return "", fmt.Errorf("Failed to convert SimpleJSONValue value %v: %w", v, err)
 		}
 		valStr = string(val)
 
 	case string:
 		val, err := json.Marshal(v)
 		if err != nil {
-			valStr = "bad string conversion"
-			return valStr, err
+			return "", fmt.Errorf("Failed to convert string value %v: %w", v, err)
 		}
 		valStr = string(val)
 
@@ -148,22 +143,24 @@ func convertValue(v interface{}) (val string, err error) {
 	case model.Document:
 		val, err := v.(model.Document).MarshalJSON()
 		if err != nil {
-			valStr = "bad string conversion"
-			return valStr, err
+			return "", fmt.Errorf("Failed to convert model.Document value %v: %w", v, err)
 		}
 		valStr = string(val)
 
 	// Arrays
 	case []interface{}:
+		var valStrs []string
 		for _, iValue := range v.([]interface{}) {
 			tempVal, err := convertValue(iValue)
 			if err != nil {
-				panic(err)
+				return "", fmt.Errorf("Failed to convert []interface{} value %v: %w", v, err)
 			}
 			valStrs = append(valStrs, tempVal)
 		}
 		valStr = fmt.Sprintf("[%s]", strings.Join(valStrs, ","))
 
+	default:
+		return "", fmt.Errorf("Failed to convert unknown type for value %v: %w", v, err)
 	}
 	return valStr, nil
 }

@@ -114,7 +114,6 @@ func listDataSources(ctx context.Context, d *plugin.QueryData, h *plugin.Hydrate
 			if doc["data"] != nil {
 				// Data sources are grouped by data source type
 				for dataSourceType, dataSources := range doc["data"].(model.Document) {
-					//plugin.Logger(ctx).Warn("Data source:", dataSources)
 					tfDataSource.Path = path
 					tfDataSource.Type = dataSourceType
 					// For each data source, scan its arguments

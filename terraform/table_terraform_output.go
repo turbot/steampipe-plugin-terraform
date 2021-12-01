@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"reflect"
 
 	"github.com/Checkmarx/kics/pkg/model"
 	"github.com/turbot/steampipe-plugin-sdk/grpc/proto"
@@ -38,7 +37,6 @@ func tableTerraformOutput(ctx context.Context) *plugin.Table {
 				Description: "Starting line number.",
 				Type:        proto.ColumnType_INT,
 			},
-			// TODO: Transform to expression
 			{
 				Name:        "value",
 				Description: "The value argument takes an expression whose result is to be returned to the user.",
@@ -105,7 +103,6 @@ func listOutputs(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData
 			if doc["output"] != nil {
 				// For each output, scan its arguments
 				for outputName, outputData := range doc["output"].(model.Document) {
-					plugin.Logger(ctx).Warn("Output:", outputData)
 					tfOutput, err = buildOutput(ctx, path, outputName, outputData.(model.Document))
 					if err != nil {
 						plugin.Logger(ctx).Error("terraform_output.listOutputs", "build_output_error", err)
@@ -141,18 +138,10 @@ func buildOutput(ctx context.Context, path string, name string, d model.Document
 			tfOutput.Description = v.(string)
 
 		case "value":
-			ty := reflect.TypeOf(v)
-			plugin.Logger(ctx).Warn("Value Type:", ty)
-			plugin.Logger(ctx).Warn("Name:", ty.Name())
-			plugin.Logger(ctx).Warn("String:", ty.String())
-			plugin.Logger(ctx).Warn("Kind:", ty.Kind())
-
-			valStr, err := convertValue(v)
+			valStr, err := convertExpressionValue(v)
 			if err != nil {
-				plugin.Logger(ctx).Warn("String conv error:", err)
-				tfOutput.Value = "bad string conversion"
-				// TODO: Re-enable error handling once conversions work
-				//return tfOutput, fmt.Errorf("Failed to resolve value argument for output%s: %w", name, err)
+				plugin.Logger(ctx).Error("terraform_output.buildOutput", "convert_value_error", err)
+				return tfOutput, err
 			}
 			tfOutput.Value = valStr
 
@@ -160,8 +149,7 @@ func buildOutput(ctx context.Context, path string, name string, d model.Document
 			var sensitiveVal bool
 			err := gocty.FromCtyValue(v.(ctyjson.SimpleJSONValue).Value, &sensitiveVal)
 			if err != nil {
-				// TODO: Return error normally instead
-				panic(err)
+				return tfOutput, fmt.Errorf("Failed to resolve sensitive argument for output %s: %w", name, err)
 			}
 			tfOutput.Sensitive = sensitiveVal
 

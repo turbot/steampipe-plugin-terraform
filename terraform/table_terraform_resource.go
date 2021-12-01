@@ -122,7 +122,6 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 			if doc["resource"] != nil {
 				// Resources are grouped by resource type
 				for resourceType, resources := range doc["resource"].(model.Document) {
-					plugin.Logger(ctx).Warn("Resource:", resources)
 					// For each resource, scan its arguments
 					for resourceName, resourceData := range resources.(model.Document) {
 						tfResource, err = buildResource(ctx, path, resourceType, resourceName, resourceData.(model.Document))

@@ -2,6 +2,7 @@ package terraform
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/Checkmarx/kics/pkg/model"
@@ -78,14 +79,12 @@ func listLocals(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData)
 
 		for _, doc := range docs {
 			if doc["locals"] != nil {
-				//plugin.Logger(ctx).Warn("Local top level:", doc["locals"])
 				// Locals are grouped by local blocks
 				switch localType := doc["locals"].(type) {
 
 				// If more than 1 local block is defined, an array of interfaces is returned
 				case []interface{}:
 					for _, locals := range doc["locals"].([]interface{}) {
-						//plugin.Logger(ctx).Warn("Locals:", locals)
 						// Get lines map to use when building each local row
 						linesMap := locals.(model.Document)["_kics_lines"].(map[string]model.LineObject)
 						for localName, localValue := range locals.(model.Document) {
@@ -112,8 +111,8 @@ func listLocals(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData)
 					}
 
 				default:
-					plugin.Logger(ctx).Warn("Unknown local type:", localType)
-					panic("Unexpected type")
+					plugin.Logger(ctx).Error("terraform_local.listLocals", "unknown_type", localType)
+					return nil, fmt.Errorf("Failed to list locals due to unknown type")
 				}
 
 			}
@@ -126,10 +125,13 @@ func buildLocal(ctx context.Context, path string, name string, value interface{}
 	var tfLocal terraformLocal
 	tfLocal.Path = path
 	tfLocal.Name = name
-	plugin.Logger(ctx).Warn("Val:", value)
-	// TODO: Convert value into the correct (?) type
-	//tfLocal.Value = value
-	tfLocal.Value = "test"
+
+	valStr, err := convertExpressionValue(value)
+	if err != nil {
+		plugin.Logger(ctx).Error("terraform_local.buildLocal", "convert_value_error", err)
+		return tfLocal, err
+	}
+	tfLocal.Value = valStr
 
 	// Each starting line number is stored in "_kics_localName", e.g., "_kics_foo"
 	lineKey := "_kics_" + name

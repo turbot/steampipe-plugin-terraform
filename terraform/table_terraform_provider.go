@@ -92,14 +92,8 @@ func listProviders(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 
 		for _, doc := range docs {
 			if doc["provider"] != nil {
-				//plugin.Logger(ctx).Warn("Provider top level:", doc["provider"])
-				//plugin.Logger(ctx).Warn("Provider top level model:", doc["provider"].(model.Document))
-
 				// Providers are grouped by provider name
 				for providerName, providers := range doc["provider"].(model.Document) {
-					//plugin.Logger(ctx).Warn("Provider name:", providerName)
-					//plugin.Logger(ctx).Warn("Providers:", providers)
-
 					// If more than 1 provider with the same name, an array of interfaces is returned
 					switch providerType := providers.(type) {
 
@@ -119,7 +113,7 @@ func listProviders(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 						break
 
 					default:
-						plugin.Logger(ctx).Error("terraform_provider.listProviders", "unknown provider type", providerType)
+						plugin.Logger(ctx).Error("terraform_provider.listProviders", "unknown_type", providerType)
 						return nil, fmt.Errorf("Failed to list providers due to unknown type for provider %s", providerName)
 					}
 
