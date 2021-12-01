@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"os"
 	"reflect"
-	"strconv"
-	"strings"
 
 	"github.com/Checkmarx/kics/pkg/model"
 	"github.com/turbot/steampipe-plugin-sdk/grpc/proto"
@@ -44,7 +42,7 @@ func tableTerraformOutput(ctx context.Context) *plugin.Table {
 			{
 				Name:        "value",
 				Description: "The value argument takes an expression whose result is to be returned to the user.",
-				Type:        proto.ColumnType_STRING,
+				Type:        proto.ColumnType_JSON,
 			},
 			{
 				Name:        "description",
@@ -72,8 +70,9 @@ type terraformOutput struct {
 	DependsOn   []string
 	Description string
 	Sensitive   bool
+	Value       string
 	//Value       cty.Value `column:"value,jsonb"`
-	Value string
+	//Value interface{}
 }
 
 func listOutputs(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
@@ -148,79 +147,14 @@ func buildOutput(ctx context.Context, path string, name string, d model.Document
 			plugin.Logger(ctx).Warn("String:", ty.String())
 			plugin.Logger(ctx).Warn("Kind:", ty.Kind())
 
-			//var valStr string
-
-			switch v.(type) {
-			// Int, numbers, and bools
-			case ctyjson.SimpleJSONValue:
-				var val int
-				err := gocty.FromCtyValue(v.(ctyjson.SimpleJSONValue).Value, &val)
-				if err != nil {
-					plugin.Logger(ctx).Warn("Conv error:", err)
-					tfOutput.Value = "bad conversion"
-					// TODO: Re-enable error handling once conversions work
-					//return tfOutput, fmt.Errorf("Failed to resolve value argument for output%s: %w", name, err)
-				}
-				tfOutput.Value = strconv.Itoa(val)
-				break
-
-			case string:
-				//valStr := fmt.Sprintf("'%s'", v)
-				//tfOutput.Value = valStr
-				tfOutput.Value = v.(string)
-
-			// Map
-			case model.Document:
-				var newMap map[string]interface{}
-				for key, value := range v.(model.Document) {
-					if !strings.HasPrefix(key, "_kics") {
-						newMap[key] = value
-					}
-				}
-
-				tfOutput.Value = "document"
-
-			// Arrays
-			case []interface{}:
-				var values []string
-				for _, value := range v.([]interface{}) {
-					//tmpVal := "\"" + value.(string) + "\""
-					tmpVal := value.(string)
-					values = append(values, tmpVal)
-				}
-				//array := "[" + strings.Join(values, ", ") + "]"
-				array := strings.Join(values, ", ")
-				tfOutput.Value = array
+			valStr, err := convertValue(v)
+			if err != nil {
+				plugin.Logger(ctx).Warn("String conv error:", err)
+				tfOutput.Value = "bad string conversion"
+				// TODO: Re-enable error handling once conversions work
+				//return tfOutput, fmt.Errorf("Failed to resolve value argument for output%s: %w", name, err)
 			}
-
-			/*
-				plugin.Logger(ctx).Warn("Values", v.(cty.Value))
-				tfOutput.Value = "testing"
-
-				if valStr, err := ctyToPostgresString(v.(cty.Value)); err == nil {
-					tfOutput.Value = valStr
-				} else {
-					plugin.Logger(ctx).Warn("Bananas", err)
-					panic(err)
-				}
-
-					switch v.(type) {
-					// TODO: Can we always assume if SimpleJSONValue it's an int?
-					case ctyjson.SimpleJSONValue:
-						var val int
-						err := gocty.FromCtyValue(v.(ctyjson.SimpleJSONValue).Value, &val)
-						if err != nil {
-							// TODO: Return error normally instead
-							panic(err)
-						}
-						tfOutput.Value = strconv.Itoa(val)
-						break
-
-					// If not SimpleJSONValue, assume string
-					default:
-						tfOutput.Value = v.(string)
-					}
-			*/
+			tfOutput.Value = valStr
 
 		case "sensitive":
 			var sensitiveVal bool

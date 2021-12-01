@@ -32,7 +32,7 @@ func tableTerraformLocal(ctx context.Context) *plugin.Table {
 			{
 				Name:        "value",
 				Description: "Local value.",
-				Type:        proto.ColumnType_STRING,
+				Type:        proto.ColumnType_JSON,
 			},
 			{
 				Name:        "start_line",
