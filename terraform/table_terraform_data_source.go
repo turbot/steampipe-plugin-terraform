@@ -9,6 +9,8 @@ import (
 	"github.com/Checkmarx/kics/pkg/model"
 	"github.com/turbot/steampipe-plugin-sdk/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/plugin"
+	"github.com/zclconf/go-cty/cty/gocty"
+	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
 
 func tableTerraformDataSource(ctx context.Context) *plugin.Table {
@@ -21,11 +23,6 @@ func tableTerraformDataSource(ctx context.Context) *plugin.Table {
 			KeyColumns:    plugin.OptionalColumns([]string{"path"}),
 		},
 		Columns: []*plugin.Column{
-			{
-				Name:        "path",
-				Description: "Path to the file.",
-				Type:        proto.ColumnType_STRING,
-			},
 			{
 				Name:        "name",
 				Description: "Data source name.",
@@ -48,7 +45,12 @@ func tableTerraformDataSource(ctx context.Context) *plugin.Table {
 			},
 			{
 				Name:        "count",
-				Description: "The count meta-argument accepts a whole number, and creates that many instances of the data source or module.",
+				Description: "The integer value for the count meta-argument if it's set as a number in a literal expression.",
+				Type:        proto.ColumnType_INT,
+			},
+			{
+				Name:        "count_src",
+				Description: "The count meta-argument accepts a whole number, and creates that many instances of the resource or module.",
 				Type:        proto.ColumnType_JSON,
 			},
 			{
@@ -66,6 +68,11 @@ func tableTerraformDataSource(ctx context.Context) *plugin.Table {
 				Description: "The provider meta-argument specifies which provider configuration to use for a data source, overriding Terraform's default behavior of selecting one based on the data source type name.",
 				Type:        proto.ColumnType_STRING,
 			},
+			{
+				Name:        "path",
+				Description: "Path to the file.",
+				Type:        proto.ColumnType_STRING,
+			},
 		},
 	}
 }
@@ -78,8 +85,9 @@ type terraformDataSource struct {
 	Arguments map[string]interface{}
 	DependsOn []string
 	// Count can be a number or refer to a local or variable
-	Count   string
-	ForEach string
+	Count    int
+	CountSrc string
+	ForEach  string
 	// A data source's provider arg will always reference a provider block
 	Provider string
 }
@@ -158,7 +166,18 @@ func buildDataSource(ctx context.Context, path string, dataSourceType string, na
 				plugin.Logger(ctx).Error("terraform_data_source.buildDataSource", "convert_count_error", err)
 				return tfDataSource, err
 			}
-			tfDataSource.Count = valStr
+			tfDataSource.CountSrc = valStr
+
+			// Only attempt to get the int value if the type is SimpleJSONValue
+			if reflect.TypeOf(v).String() == "json.SimpleJSONValue" {
+				var countVal int
+				err := gocty.FromCtyValue(v.(ctyjson.SimpleJSONValue).Value, &countVal)
+				// Log the error but don't return the err since we have count_src anyway
+				if err != nil {
+					plugin.Logger(ctx).Warn("terraform_resource.buildResource", "convert_count_error", err)
+				}
+				tfDataSource.Count = countVal
+			}
 
 		case "provider":
 			if reflect.TypeOf(v).String() != "string" {

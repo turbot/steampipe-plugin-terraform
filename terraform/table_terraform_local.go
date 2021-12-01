@@ -21,11 +21,6 @@ func tableTerraformLocal(ctx context.Context) *plugin.Table {
 		},
 		Columns: []*plugin.Column{
 			{
-				Name:        "path",
-				Description: "Path to the file.",
-				Type:        proto.ColumnType_STRING,
-			},
-			{
 				Name:        "name",
 				Description: "Local name.",
 				Type:        proto.ColumnType_STRING,
@@ -39,6 +34,11 @@ func tableTerraformLocal(ctx context.Context) *plugin.Table {
 				Name:        "start_line",
 				Description: "Starting line number.",
 				Type:        proto.ColumnType_INT,
+			},
+			{
+				Name:        "path",
+				Description: "Path to the file.",
+				Type:        proto.ColumnType_STRING,
 			},
 		},
 	}
