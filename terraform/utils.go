@@ -40,7 +40,7 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 
 	// Fail if no paths are specified
 	terraformConfig := GetConfig(d.Connection)
-	if &terraformConfig == nil || terraformConfig.Paths == nil {
+	if terraformConfig.Paths == nil {
 		return nil, errors.New("paths must be configured")
 	}
 
@@ -51,7 +51,7 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 		iMatches, err := filepath.Glob(i)
 		if err != nil {
 			// Fail if any path is an invalid glob
-			return nil, errors.New(fmt.Sprintf("Path is not a valid glob: %s", i))
+			return nil, fmt.Errorf("Path is not a valid glob: %s", i)
 		}
 		matches = append(matches, iMatches...)
 	}
@@ -123,10 +123,10 @@ func sanitizeDocument(d model.Document) {
 
 // For any arguments that can be a TF expression, convert to string for easier handling
 func convertExpressionValue(v interface{}) (valStr string, err error) {
-	switch v.(type) {
-	// Int, numbers, and bools
+	switch v := v.(type) {
+	// Numbers and bools
 	case ctyjson.SimpleJSONValue:
-		val, err := v.(ctyjson.SimpleJSONValue).MarshalJSON()
+		val, err := v.MarshalJSON()
 		if err != nil {
 			return "", fmt.Errorf("Failed to convert SimpleJSONValue value %v: %w", v, err)
 		}
@@ -139,9 +139,9 @@ func convertExpressionValue(v interface{}) (valStr string, err error) {
 		}
 		valStr = string(val)
 
-	// Map
+	// Maps
 	case model.Document:
-		val, err := v.(model.Document).MarshalJSON()
+		val, err := v.MarshalJSON()
 		if err != nil {
 			return "", fmt.Errorf("Failed to convert model.Document value %v: %w", v, err)
 		}
@@ -150,7 +150,7 @@ func convertExpressionValue(v interface{}) (valStr string, err error) {
 	// Arrays
 	case []interface{}:
 		var valStrs []string
-		for _, iValue := range v.([]interface{}) {
+		for _, iValue := range v {
 			tempVal, err := convertExpressionValue(iValue)
 			if err != nil {
 				return "", fmt.Errorf("Failed to convert []interface{} value %v: %w", v, err)
@@ -160,7 +160,7 @@ func convertExpressionValue(v interface{}) (valStr string, err error) {
 		valStr = fmt.Sprintf("[%s]", strings.Join(valStrs, ","))
 
 	default:
-		return "", fmt.Errorf("Failed to convert due to unknown type for value %v: %w", v, err)
+		return "", fmt.Errorf("Failed to convert value %v due to unknown type: %w", v, err)
 	}
 	return valStr, nil
 }

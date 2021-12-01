@@ -108,7 +108,6 @@ func listProviders(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 							}
 							d.StreamListItem(ctx, tfProvider)
 						}
-						break
 
 						// If only 1 provider has the name, a model.Document is returned
 					case model.Document:
@@ -119,7 +118,6 @@ func listProviders(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 							return nil, err
 						}
 						d.StreamListItem(ctx, tfProvider)
-						break
 
 					default:
 						plugin.Logger(ctx).Error("terraform_provider.listProviders", "unknown_type", providerType)
