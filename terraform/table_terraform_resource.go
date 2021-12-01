@@ -84,8 +84,9 @@ type terraformResource struct {
 	StartLine int
 	Arguments map[string]interface{}
 	DependsOn []string
-	Count     string
-	ForEach   string
+	// Count can be a number or refer to a local or variable
+	Count   string
+	ForEach string
 	// A resource's provider arg will always reference a provider block
 	Provider  string
 	Lifecycle map[string]interface{}
