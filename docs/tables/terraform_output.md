@@ -46,21 +46,3 @@ from
 where
   value::text like '%aws_s3_bucket.%.arn%';
 ```
-
-### Detect secrets in output values (requires Code plugin)
-
-```sql
-select
-  name as output_name,
-  path as file_path,
-  secret_type,
-  secret,
-  authenticated,
-  line,
-  col
-from
-  code_secret,
-  terraform_output
-where
-  src = value::text;
-```

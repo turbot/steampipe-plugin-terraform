@@ -27,21 +27,3 @@ from
 where
   name ilike 'owner'
 ```
-
-### Detect secrets in local values (requires Code plugin)
-
-```sql
-select
-  name as local_name,
-  path as file_path,
-  secret_type,
-  secret,
-  authenticated,
-  line,
-  col
-from
-  code_secret,
-  terraform_local
-where
-  src = value::text;
-```
