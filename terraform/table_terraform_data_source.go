@@ -34,11 +34,6 @@ func tableTerraformDataSource(ctx context.Context) *plugin.Table {
 				Type:        proto.ColumnType_STRING,
 			},
 			{
-				Name:        "start_line",
-				Description: "Starting line number.",
-				Type:        proto.ColumnType_INT,
-			},
-			{
 				Name:        "arguments",
 				Description: "Data source arguments.",
 				Type:        proto.ColumnType_JSON,
@@ -67,6 +62,11 @@ func tableTerraformDataSource(ctx context.Context) *plugin.Table {
 				Name:        "provider",
 				Description: "The provider meta-argument specifies which provider configuration to use for a data source, overriding Terraform's default behavior of selecting one based on the data source type name.",
 				Type:        proto.ColumnType_STRING,
+			},
+			{
+				Name:        "start_line",
+				Description: "Starting line number.",
+				Type:        proto.ColumnType_INT,
 			},
 			{
 				Name:        "path",

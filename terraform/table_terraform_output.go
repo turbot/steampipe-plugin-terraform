@@ -29,11 +29,6 @@ func tableTerraformOutput(ctx context.Context) *plugin.Table {
 				Type:        proto.ColumnType_STRING,
 			},
 			{
-				Name:        "start_line",
-				Description: "Starting line number.",
-				Type:        proto.ColumnType_INT,
-			},
-			{
 				Name:        "value",
 				Description: "The value argument takes an expression whose result is to be returned to the user.",
 				Type:        proto.ColumnType_JSON,
@@ -52,6 +47,11 @@ func tableTerraformOutput(ctx context.Context) *plugin.Table {
 				Name:        "depends_on",
 				Description: "Use the depends_on meta-argument to handle hidden output or module dependencies that Terraform can't automatically infer.",
 				Type:        proto.ColumnType_JSON,
+			},
+			{
+				Name:        "start_line",
+				Description: "Starting line number.",
+				Type:        proto.ColumnType_INT,
 			},
 			{
 				Name:        "path",
