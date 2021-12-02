@@ -160,7 +160,7 @@ func buildOutput(ctx context.Context, path string, name string, d model.Document
 			tfOutput.Sensitive = sensitiveVal
 
 		case "depends_on":
-			if reflect.TypeOf(v).String() != "[]interface{}" {
+			if reflect.TypeOf(v).String() != "[]interface {}" {
 				return tfOutput, fmt.Errorf("The 'depends_on' argument for output '%s' must be of type list", name)
 			}
 			interfaces := v.([]interface{})

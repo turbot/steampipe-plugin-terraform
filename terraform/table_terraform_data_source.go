@@ -194,7 +194,7 @@ func buildDataSource(ctx context.Context, path string, dataSourceType string, na
 			tfDataSource.ForEach = valStr
 
 		case "depends_on":
-			if reflect.TypeOf(v).String() != "[]interface{}" {
+			if reflect.TypeOf(v).String() != "[]interface {}" {
 				return tfDataSource, fmt.Errorf("The 'depends_on' argument for data source '%s' must be of type list", name)
 			}
 			interfaces := v.([]interface{})
