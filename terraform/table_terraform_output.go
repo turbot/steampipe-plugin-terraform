@@ -24,19 +24,9 @@ func tableTerraformOutput(ctx context.Context) *plugin.Table {
 		},
 		Columns: []*plugin.Column{
 			{
-				Name:        "path",
-				Description: "Path to the file.",
-				Type:        proto.ColumnType_STRING,
-			},
-			{
 				Name:        "name",
 				Description: "Output name.",
 				Type:        proto.ColumnType_STRING,
-			},
-			{
-				Name:        "start_line",
-				Description: "Starting line number.",
-				Type:        proto.ColumnType_INT,
 			},
 			{
 				Name:        "value",
@@ -57,6 +47,16 @@ func tableTerraformOutput(ctx context.Context) *plugin.Table {
 				Name:        "depends_on",
 				Description: "Use the depends_on meta-argument to handle hidden output or module dependencies that Terraform can't automatically infer.",
 				Type:        proto.ColumnType_JSON,
+			},
+			{
+				Name:        "start_line",
+				Description: "Starting line number.",
+				Type:        proto.ColumnType_INT,
+			},
+			{
+				Name:        "path",
+				Description: "Path to the file.",
+				Type:        proto.ColumnType_STRING,
 			},
 		},
 	}
@@ -160,7 +160,7 @@ func buildOutput(ctx context.Context, path string, name string, d model.Document
 			tfOutput.Sensitive = sensitiveVal
 
 		case "depends_on":
-			if reflect.TypeOf(v).String() != "[]interface{}" {
+			if reflect.TypeOf(v).String() != "[]interface {}" {
 				return tfOutput, fmt.Errorf("The 'depends_on' argument for output '%s' must be of type list", name)
 			}
 			interfaces := v.([]interface{})

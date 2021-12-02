@@ -14,7 +14,53 @@ Output values are like the return values of a Terraform module, and have several
 select
   name,
   description,
-  value
+  value,
+  path
 from
   terraform_output;
+```
+
+### List sensitive outputs
+
+```sql
+select
+  name,
+  description,
+  path
+from
+  terraform_output
+where
+  sensitive;
+```
+
+### List outputs referring to AWS S3 bucket ARN attributes
+
+```sql
+select
+  name,
+  description,
+  value,
+  path
+from
+  terraform_output
+where
+  value::text like '%aws_s3_bucket.%.arn%';
+```
+
+### Detect secrets in output values (requires Code plugin)
+
+```sql
+select
+  name as output_name,
+  path as file_path,
+  secret_type,
+  secret,
+  authenticated,
+  line,
+  col
+from
+  code_secret,
+  terraform_output
+where
+  src = value::text;
 ```

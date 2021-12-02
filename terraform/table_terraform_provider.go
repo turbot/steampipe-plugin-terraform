@@ -22,19 +22,9 @@ func tableTerraformProvider(ctx context.Context) *plugin.Table {
 		},
 		Columns: []*plugin.Column{
 			{
-				Name:        "path",
-				Description: "Path to the file.",
-				Type:        proto.ColumnType_STRING,
-			},
-			{
 				Name:        "name",
 				Description: "Provider name.",
 				Type:        proto.ColumnType_STRING,
-			},
-			{
-				Name:        "start_line",
-				Description: "Starting line number.",
-				Type:        proto.ColumnType_INT,
 			},
 			{
 				Name:        "arguments",
@@ -50,6 +40,16 @@ func tableTerraformProvider(ctx context.Context) *plugin.Table {
 			{
 				Name:        "version",
 				Description: "The version meta-argument specifies a version constraint for a provider, and works the same way as the version argument in a required_providers block.",
+				Type:        proto.ColumnType_STRING,
+			},
+			{
+				Name:        "start_line",
+				Description: "Starting line number.",
+				Type:        proto.ColumnType_INT,
+			},
+			{
+				Name:        "path",
+				Description: "Path to the file.",
 				Type:        proto.ColumnType_STRING,
 			},
 		},

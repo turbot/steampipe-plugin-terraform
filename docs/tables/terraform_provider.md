@@ -12,7 +12,36 @@ Most providers configure a specific infrastructure platform (either cloud or sel
 select
   name,
   alias,
-  arguments
+  arguments,
+  path
 from
   terraform_provider;
+```
+
+### List providers using deprecated 'version' argument
+
+```sql
+select
+  name,
+  alias,
+  version,
+  path
+from
+  terraform_provider
+where
+  version is not null;
+```
+
+### List AWS providers with their regions
+
+```sql
+select
+  name,
+  alias,
+  arguments ->> 'region' as region,
+  path
+from
+  terraform_provider
+where
+  name = 'aws';
 ```
