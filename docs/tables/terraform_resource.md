@@ -10,7 +10,8 @@ Each resource block describes one or more infrastructure objects, such as virtua
 select
   name,
   type,
-  arguments
+  arguments,
+  path
 from
   terraform_resource;
 ```
@@ -21,7 +22,8 @@ from
 select
   name,
   type,
-  arguments
+  arguments,
+  path
 from
   terraform_resource
 where
@@ -33,7 +35,8 @@ where
 ```sql
 select
   name,
-  arguments ->> 'ami' as ami
+  arguments ->> 'ami' as ami,
+  path
 from
   terraform_resource
 where
@@ -44,7 +47,8 @@ where
 
 ```sql
 select
-  name
+  name,
+  path
 from
   terraform_resource
 where
@@ -60,7 +64,8 @@ select
   case
     when arguments -> 'allow_blob_public_access' is null then false
     else (arguments -> 'allow_blob_public_access')::boolean
-  end as allow_blob_public_access
+  end as allow_blob_public_access,
+  path
 from
   terraform_resource
 where
@@ -74,7 +79,8 @@ where
 ```sql
 select
   name,
-  arguments -> 'ssl_enforcement_enabled' as ssl_enforcement_enabled
+  arguments -> 'ssl_enforcement_enabled' as ssl_enforcement_enabled,
+  path
 from
   terraform_resource
 where
@@ -90,7 +96,8 @@ select
   case
     when arguments -> 'public_network_access_enabled' is null then true
     else (arguments -> 'public_network_access_enabled')::boolean
-  end as public_network_access_enabled
+  end as public_network_access_enabled,
+  path
 from
   terraform_resource
 where
@@ -98,4 +105,3 @@ where
   -- Optional arg that defaults to true
   and (arguments -> 'public_network_access_enabled' is null or (arguments -> 'public_network_access_enabled')::boolean);
 ```
-
