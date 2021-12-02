@@ -16,15 +16,45 @@ A Terraform configuration file is used to declare resources, variables, modules,
 
 [Steampipe](https://steampipe.io) is an open source CLI to instantly query data using SQL.
 
-Query data from the `my_users.tf` file:
+Query all resources in your Terraform files:
 
 ```sql
 select
   name,
   type,
-  arguments
+  jsonb_pretty(arguments) as args
 from
   terraform_resource;
+```
+
+```
+> select name, type, jsonb_pretty(arguments) as args from terraform_resource;
++------------+----------------+--------------------------------------------+
+| name       | type           | args                                       |
++------------+----------------+--------------------------------------------+
+| app_server | aws_instance   | {                                          |
+|            |                |     "ami": "ami-830c94e3",                 |
+|            |                |     "tags": {                              |
+|            |                |         "Name": "ExampleAppServerInstance" |
+|            |                |     },                                     |
+|            |                |     "instance_type": "t2.micro"            |
+|            |                | }                                          |
+| app_volume | aws_ebs_volume | {                                          |
+|            |                |     "size": 40,                            |
+|            |                |     "tags": {                              |
+|            |                |         "Name": "HelloWorld"               |
+|            |                |     },                                     |
+|            |                |     "availability_zone": "us-west-2a"      |
+|            |                | }                                          |
+| app_bucket | aws_s3_bucket  | {                                          |
+|            |                |     "acl": "private",                      |
+|            |                |     "tags": {                              |
+|            |                |         "Name": "Test bucket",             |
+|            |                |         "Environment": "Dev"               |
+|            |                |     },                                     |
+|            |                |     "bucket": "my-app-bucket"              |
+|            |                | }                                          |
++------------+----------------+--------------------------------------------+
 ```
 
 ## Documentation
