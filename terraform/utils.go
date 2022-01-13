@@ -76,7 +76,7 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 		// This file was expanded from the glob, so check it's likely to be
 		// of the right type based on the extension.
 		ext := filepath.Ext(i)
-		if ext == ".tf" || ext == ".tf.json" {
+		if ext == ".tf" {
 			d.StreamListItem(ctx, filePath{Path: i})
 		}
 	}
