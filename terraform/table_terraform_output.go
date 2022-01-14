@@ -94,13 +94,13 @@ func listOutputs(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData
 	var tfOutput terraformOutput
 
 	for _, parser := range combinedParser {
-		docs, _, err := parser.Parse(path, content)
+		parsedDocs, err := parser.Parse(path, content)
 		if err != nil {
 			plugin.Logger(ctx).Error("terraform_output.listOutputs", "parse_error", err, "path", path)
 			return nil, err
 		}
 
-		for _, doc := range docs {
+		for _, doc := range parsedDocs.Docs {
 			if doc["output"] != nil {
 				// For each output, scan its arguments
 				for outputName, outputData := range doc["output"].(model.Document) {

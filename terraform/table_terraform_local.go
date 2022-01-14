@@ -71,13 +71,13 @@ func listLocals(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData)
 	var tfLocal terraformLocal
 
 	for _, parser := range combinedParser {
-		docs, _, err := parser.Parse(path, content)
+		parsedDocs, err := parser.Parse(path, content)
 		if err != nil {
 			plugin.Logger(ctx).Error("terraform_local.listLocals", "parse_error", err, "path", path)
 			return nil, err
 		}
 
-		for _, doc := range docs {
+		for _, doc := range parsedDocs.Docs {
 			if doc["locals"] != nil {
 				// Locals are grouped by local blocks
 				switch localType := doc["locals"].(type) {
@@ -87,8 +87,10 @@ func listLocals(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData)
 					for _, locals := range doc["locals"].([]interface{}) {
 						// Get lines map to use when building each local row
 						linesMap := locals.(model.Document)["_kics_lines"].(map[string]model.LineObject)
+						// Remove all "_kics" arguments now that we have the lines map
+						sanitizeDocument(locals.(model.Document))
 						for localName, localValue := range locals.(model.Document) {
-							tfLocal, err = buildLocal(ctx, path, localName, localValue, locals.(model.Document), linesMap)
+							tfLocal, err = buildLocal(ctx, path, localName, localValue, linesMap)
 							if err != nil {
 								plugin.Logger(ctx).Error("terraform_local.listLocals", "build_local_error", err)
 								return nil, err
@@ -101,8 +103,10 @@ func listLocals(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData)
 				case model.Document:
 					// Get lines map to use when building each local row
 					linesMap := doc["locals"].(model.Document)["_kics_lines"].(map[string]model.LineObject)
+					// Remove all "_kics" arguments now that we have the lines map
+					sanitizeDocument(doc["locals"].(model.Document))
 					for localName, localValue := range doc["locals"].(model.Document) {
-						tfLocal, err = buildLocal(ctx, path, localName, localValue, doc["locals"].(model.Document), linesMap)
+						tfLocal, err = buildLocal(ctx, path, localName, localValue, linesMap)
 						if err != nil {
 							plugin.Logger(ctx).Error("terraform_local.listLocals", "build_local_error", err)
 							return nil, err
@@ -121,7 +125,7 @@ func listLocals(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData)
 	return nil, nil
 }
 
-func buildLocal(ctx context.Context, path string, name string, value interface{}, d model.Document, lineMap map[string]model.LineObject) (terraformLocal, error) {
+func buildLocal(ctx context.Context, path string, name string, value interface{}, lineMap map[string]model.LineObject) (terraformLocal, error) {
 	var tfLocal terraformLocal
 	tfLocal.Path = path
 	tfLocal.Name = name
@@ -137,9 +141,6 @@ func buildLocal(ctx context.Context, path string, name string, value interface{}
 	lineKey := "_kics_" + name
 	defaultLine := lineMap[lineKey]
 	tfLocal.StartLine = defaultLine.Line
-
-	// Remove all "_kics" arguments
-	sanitizeDocument(d)
 
 	return tfLocal, nil
 }

@@ -120,13 +120,13 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 	var tfResource terraformResource
 
 	for _, parser := range combinedParser {
-		docs, _, err := parser.Parse(path, content)
+		parsedDocs, err := parser.Parse(path, content)
 		if err != nil {
 			plugin.Logger(ctx).Error("terraform_resource.listResources", "parse_error", err, "path", path)
 			return nil, err
 		}
 
-		for _, doc := range docs {
+		for _, doc := range parsedDocs.Docs {
 			if doc["resource"] != nil {
 				// Resources are grouped by resource type
 				for resourceType, resources := range doc["resource"].(model.Document) {

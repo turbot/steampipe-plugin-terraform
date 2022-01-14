@@ -12,9 +12,7 @@ import (
 
 	"github.com/Checkmarx/kics/pkg/model"
 	"github.com/Checkmarx/kics/pkg/parser"
-	jsonParser "github.com/Checkmarx/kics/pkg/parser/json"
 	terraformParser "github.com/Checkmarx/kics/pkg/parser/terraform"
-	yamlParser "github.com/Checkmarx/kics/pkg/parser/yaml"
 	"github.com/turbot/steampipe-plugin-sdk/plugin"
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
@@ -87,8 +85,6 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 func Parser() ([]*parser.Parser, error) {
 
 	combinedParser, err := parser.NewBuilder().
-		Add(&jsonParser.Parser{}).
-		Add(&yamlParser.Parser{}).
 		Add(terraformParser.NewDefault()).
 		Build([]string{"Terraform"}, []string{""})
 	if err != nil {
@@ -160,7 +156,7 @@ func convertExpressionValue(v interface{}) (valStr string, err error) {
 		valStr = fmt.Sprintf("[%s]", strings.Join(valStrs, ","))
 
 	default:
-		return "", fmt.Errorf("Failed to convert value %v due to unknown type: %w", v, err)
+		return "", fmt.Errorf("Failed to convert value %v due to unknown type: %T", v, v)
 	}
 	return valStr, nil
 }

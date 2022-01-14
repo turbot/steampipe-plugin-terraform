@@ -85,13 +85,13 @@ func listProviders(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 	var tfProvider terraformProvider
 
 	for _, parser := range combinedParser {
-		docs, _, err := parser.Parse(path, content)
+		parsedDocs, err := parser.Parse(path, content)
 		if err != nil {
 			plugin.Logger(ctx).Error("terraform_provider.listProviders", "parse_error", err, "path", path)
 			return nil, err
 		}
 
-		for _, doc := range docs {
+		for _, doc := range parsedDocs.Docs {
 			if doc["provider"] != nil {
 				// Providers are grouped by provider name
 				for providerName, providers := range doc["provider"].(model.Document) {
