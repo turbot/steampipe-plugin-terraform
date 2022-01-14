@@ -1,3 +1,13 @@
+## v0.0.3 [2022-01-14]
+
+_Enhancements_
+
+- Recompiled plugin with [steampipe-plugin-sdk v1.8.3](https://github.com/turbot/steampipe-plugin-sdk/blob/main/CHANGELOG.md#v183--2021-12-23)
+
+_Bug fixes_
+
+- Fixed `terraform_local` queries intermittently failing due to a value conversion error
+
 ## v0.0.2 [2021-12-16]
 
 _Enhancements_
