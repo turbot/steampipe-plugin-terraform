@@ -160,3 +160,19 @@ func convertExpressionValue(v interface{}) (valStr string, err error) {
 	}
 	return valStr, nil
 }
+
+func ParseContent(ctx context.Context, d *plugin.QueryData, path string, content []byte, p *parser.Parser) (parser.ParsedDocument, error) {
+	cacheKey := path
+	// if found in cache, return the result
+	if cachedData, ok := d.ConnectionManager.Cache.Get(cacheKey); ok {
+		return cachedData.(parser.ParsedDocument), nil
+	}
+
+	parsedDocs, err := p.Parse(path, content)
+	if err != nil {
+		plugin.Logger(ctx).Error("ParseContent", "parse_error", err, "path", path)
+		return parser.ParsedDocument{}, err
+	}
+
+	return parsedDocs, nil
+}
