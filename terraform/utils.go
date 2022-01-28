@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 
 	"github.com/Checkmarx/kics/pkg/model"
 	"github.com/Checkmarx/kics/pkg/parser"
@@ -20,6 +21,8 @@ import (
 type filePath struct {
 	Path string
 }
+
+var m = sync.Mutex{}
 
 func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 
@@ -168,11 +171,13 @@ func ParseContent(ctx context.Context, d *plugin.QueryData, path string, content
 		return cachedData.(parser.ParsedDocument), nil
 	}
 
+	m.Lock()
 	parsedDocs, err := p.Parse(path, content)
 	if err != nil {
 		plugin.Logger(ctx).Error("ParseContent", "parse_error", err, "path", path)
 		return parser.ParsedDocument{}, err
 	}
+	m.Unlock()
 
 	return parsedDocs, nil
 }
