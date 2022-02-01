@@ -1,3 +1,9 @@
+## v0.0.4 [2022-02-01]
+
+_Bug fixes_
+
+- Fixed: Add lock to file parsing function to prevent concurrent map read/write errors ([#9](https://github.com/turbot/steampipe-plugin-terraform/pull/9))
+
 ## v0.0.3 [2022-01-14]
 
 _Enhancements_
