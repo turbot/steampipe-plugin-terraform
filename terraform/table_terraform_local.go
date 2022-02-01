@@ -71,7 +71,7 @@ func listLocals(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData)
 	var tfLocal terraformLocal
 
 	for _, parser := range combinedParser {
-		parsedDocs, err := parser.Parse(path, content)
+		parsedDocs, err := ParseContent(ctx, d, path, content, parser)
 		if err != nil {
 			plugin.Logger(ctx).Error("terraform_local.listLocals", "parse_error", err, "path", path)
 			return nil, err

@@ -22,7 +22,8 @@ type filePath struct {
 	Path string
 }
 
-var m = sync.Mutex{}
+// Use when parsing any TF file to prevent concurrent map read and write errors
+var parseMutex = sync.Mutex{}
 
 func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 
@@ -165,19 +166,16 @@ func convertExpressionValue(v interface{}) (valStr string, err error) {
 }
 
 func ParseContent(ctx context.Context, d *plugin.QueryData, path string, content []byte, p *parser.Parser) (parser.ParsedDocument, error) {
-	cacheKey := path
-	// if found in cache, return the result
-	if cachedData, ok := d.ConnectionManager.Cache.Get(cacheKey); ok {
-		return cachedData.(parser.ParsedDocument), nil
-	}
+	// Only allow parsing of one file at a time to prevent concurrent map read
+	// and write errors
+	parseMutex.Lock()
+	defer parseMutex.Unlock()
 
-	m.Lock()
 	parsedDocs, err := p.Parse(path, content)
 	if err != nil {
-		plugin.Logger(ctx).Error("ParseContent", "parse_error", err, "path", path)
+		plugin.Logger(ctx).Error("utils.ParseContent", "parse_error", err, "path", path)
 		return parser.ParsedDocument{}, err
 	}
-	m.Unlock()
 
 	return parsedDocs, nil
 }

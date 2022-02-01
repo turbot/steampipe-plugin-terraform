@@ -112,7 +112,7 @@ func listDataSources(ctx context.Context, d *plugin.QueryData, h *plugin.Hydrate
 	var tfDataSource terraformDataSource
 
 	for _, parser := range combinedParser {
-		parsedDocs, err := parser.Parse(path, content)
+		parsedDocs, err := ParseContent(ctx, d, path, content, parser)
 		if err != nil {
 			plugin.Logger(ctx).Error("terraform_data_source.listDataSources", "parse_error", err, "path", path)
 			return nil, err
