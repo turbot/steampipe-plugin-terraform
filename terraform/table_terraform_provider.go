@@ -85,7 +85,7 @@ func listProviders(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 	var tfProvider terraformProvider
 
 	for _, parser := range combinedParser {
-		parsedDocs, err := parser.Parse(path, content)
+		parsedDocs, err := ParseContent(ctx, d, path, content, parser)
 		if err != nil {
 			plugin.Logger(ctx).Error("terraform_provider.listProviders", "parse_error", err, "path", path)
 			return nil, err

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 
 	"github.com/Checkmarx/kics/pkg/model"
 	"github.com/Checkmarx/kics/pkg/parser"
@@ -20,6 +21,9 @@ import (
 type filePath struct {
 	Path string
 }
+
+// Use when parsing any TF file to prevent concurrent map read and write errors
+var parseMutex = sync.Mutex{}
 
 func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 
@@ -159,4 +163,19 @@ func convertExpressionValue(v interface{}) (valStr string, err error) {
 		return "", fmt.Errorf("Failed to convert value %v due to unknown type: %T", v, v)
 	}
 	return valStr, nil
+}
+
+func ParseContent(ctx context.Context, d *plugin.QueryData, path string, content []byte, p *parser.Parser) (parser.ParsedDocument, error) {
+	// Only allow parsing of one file at a time to prevent concurrent map read
+	// and write errors
+	parseMutex.Lock()
+	defer parseMutex.Unlock()
+
+	parsedDocs, err := p.Parse(path, content)
+	if err != nil {
+		plugin.Logger(ctx).Error("utils.ParseContent", "parse_error", err, "path", path)
+		return parser.ParsedDocument{}, err
+	}
+
+	return parsedDocs, nil
 }
