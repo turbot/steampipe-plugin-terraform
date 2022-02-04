@@ -82,11 +82,11 @@ Installing the latest terraform plugin will create a config file (`~/.steampipe/
 ```hcl
 connection "terraform" {
   plugin = "terraform"
-  paths  = [ "/path/to/your/files/*.tf" ]
+  paths  = [ "./*.tf" ]
 }
 ```
 
-- `paths` - A list of directory paths to search for Terraform files. Paths may [include wildcards](https://pkg.go.dev/path/filepath#Match). File matches must have the extension `.tf` (case insensitive).
+- `paths` - A list of directory paths to search for Terraform files. Paths may [include wildcards](https://pkg.go.dev/path/filepath#Match). File matches must have the extension `.tf` (case insensitive). Default set to current working directory.
 
 ## Get involved
 

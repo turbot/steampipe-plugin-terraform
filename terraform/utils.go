@@ -6,6 +6,7 @@ import (
 	json "encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"github.com/Checkmarx/kics/pkg/model"
 	"github.com/Checkmarx/kics/pkg/parser"
 	terraformParser "github.com/Checkmarx/kics/pkg/parser/terraform"
+	"github.com/bmatcuk/doublestar"
 	"github.com/turbot/steampipe-plugin-sdk/plugin"
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
@@ -50,7 +52,32 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 	var matches []string
 	paths := terraformConfig.Paths
 	for _, i := range paths {
-		iMatches, err := filepath.Glob(i)
+		// Check to resolve ~ to home dir
+		if strings.HasPrefix(i, "~") {
+			// File system context
+			home, err := os.UserHomeDir()
+			if err != nil {
+				plugin.Logger(ctx).Error("tfConfigList", "os.UserHomeDir error. ~ will not be expanded in paths.", err)
+			}
+
+			// Resolve ~ to home dir
+			if home != "" {
+				if i == "~" {
+					i = home
+				} else if strings.HasPrefix(i, "~/") {
+					i = filepath.Join(home, i[2:])
+				}
+			}
+		}
+
+		// Get full path
+		fullPath, err := filepath.Abs(i)
+		if err != nil {
+			plugin.Logger(ctx).Error("tfConfigList", "failed to fetch absolute path", err)
+			return nil, err
+		}
+
+		iMatches, err := doublestar.Glob(fullPath)
 		if err != nil {
 			// Fail if any path is an invalid glob
 			return nil, fmt.Errorf("Path is not a valid glob: %s", i)
