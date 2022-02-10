@@ -90,7 +90,7 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 		// Check file or directory
 		fileInfo, err := os.Stat(i)
 		if err != nil {
-			plugin.Logger(ctx).Error("fileList", "error reading file path", err)
+			plugin.Logger(ctx).Error("tfConfigList", "error reading file path", err)
 			return nil, err
 		}
 

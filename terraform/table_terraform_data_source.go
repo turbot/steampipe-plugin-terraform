@@ -115,7 +115,7 @@ func listDataSources(ctx context.Context, d *plugin.QueryData, h *plugin.Hydrate
 		parsedDocs, err := ParseContent(ctx, d, path, content, parser)
 		if err != nil {
 			plugin.Logger(ctx).Error("terraform_data_source.listDataSources", "parse_error", err, "path", path)
-			return nil, fmt.Errorf("unsupported file to parse: %s", path)
+			return nil, fmt.Errorf("failed to parse file %s: %v", path, err)
 		}
 
 		for _, doc := range parsedDocs.Docs {
