@@ -11,5 +11,5 @@ connection "terraform" {
   #  - "steampipe*" matches all files starting with "steampipe".
   # Exact file paths can have any name, i.e. `"/path/to/exact/custom.tf"`.
   # Default set to current working directory.
-  paths = [ "./*.tf" ]
+  paths = [ "*.tf" ]
 }

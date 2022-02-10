@@ -87,6 +87,17 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 
 	// Sanitize the matches to likely Terraform files
 	for _, i := range matches {
+		// Check file or directory
+		fileInfo, err := os.Stat(i)
+		if err != nil {
+			plugin.Logger(ctx).Error("fileList", "error reading file path", err)
+			return nil, err
+		}
+
+		// Ignore, if given path is a directory
+		if fileInfo.IsDir() {
+			continue
+		}
 
 		// If the file path is an exact match to a matrix path then it's always
 		// treated as a match - it was requested exactly
@@ -101,13 +112,7 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 			d.StreamListItem(ctx, filePath{Path: i})
 			continue
 		}
-
-		// This file was expanded from the glob, so check it's likely to be
-		// of the right type based on the extension.
-		ext := filepath.Ext(i)
-		if ext == ".tf" {
-			d.StreamListItem(ctx, filePath{Path: i})
-		}
+		d.StreamListItem(ctx, filePath{Path: i})
 	}
 
 	return nil, nil

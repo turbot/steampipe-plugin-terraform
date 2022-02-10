@@ -88,7 +88,7 @@ func listProviders(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 		parsedDocs, err := ParseContent(ctx, d, path, content, parser)
 		if err != nil {
 			plugin.Logger(ctx).Error("terraform_provider.listProviders", "parse_error", err, "path", path)
-			return nil, err
+			return nil, fmt.Errorf("unsupported file to parse: %s", path)
 		}
 
 		for _, doc := range parsedDocs.Docs {
