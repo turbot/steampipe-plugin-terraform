@@ -74,7 +74,7 @@ func listLocals(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData)
 		parsedDocs, err := ParseContent(ctx, d, path, content, parser)
 		if err != nil {
 			plugin.Logger(ctx).Error("terraform_local.listLocals", "parse_error", err, "path", path)
-			return nil, err
+			return nil, fmt.Errorf("failed to parse file %s: %v", path, err)
 		}
 
 		for _, doc := range parsedDocs.Docs {

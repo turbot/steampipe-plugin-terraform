@@ -6,6 +6,7 @@ import (
 	json "encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"github.com/Checkmarx/kics/pkg/model"
 	"github.com/Checkmarx/kics/pkg/parser"
 	terraformParser "github.com/Checkmarx/kics/pkg/parser/terraform"
+	"github.com/bmatcuk/doublestar"
 	"github.com/turbot/steampipe-plugin-sdk/plugin"
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
@@ -50,7 +52,32 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 	var matches []string
 	paths := terraformConfig.Paths
 	for _, i := range paths {
-		iMatches, err := filepath.Glob(i)
+		// Check to resolve ~ to home dir
+		if strings.HasPrefix(i, "~") {
+			// File system context
+			home, err := os.UserHomeDir()
+			if err != nil {
+				plugin.Logger(ctx).Error("utils.tfConfigList", "os.UserHomeDir error. ~ will not be expanded in paths.", err)
+			}
+
+			// Resolve ~ to home dir
+			if home != "" {
+				if i == "~" {
+					i = home
+				} else if strings.HasPrefix(i, "~/") {
+					i = filepath.Join(home, i[2:])
+				}
+			}
+		}
+
+		// Get full path
+		fullPath, err := filepath.Abs(i)
+		if err != nil {
+			plugin.Logger(ctx).Error("utils.tfConfigList", "failed to fetch absolute path", err, "path", i)
+			return nil, err
+		}
+
+		iMatches, err := doublestar.Glob(fullPath)
 		if err != nil {
 			// Fail if any path is an invalid glob
 			return nil, fmt.Errorf("Path is not a valid glob: %s", i)
@@ -60,6 +87,17 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 
 	// Sanitize the matches to likely Terraform files
 	for _, i := range matches {
+		// Check if file or directory
+		fileInfo, err := os.Stat(i)
+		if err != nil {
+			plugin.Logger(ctx).Error("utils.tfConfigList", "error getting file info", err, "path", i)
+			return nil, err
+		}
+
+		// Ignore directories
+		if fileInfo.IsDir() {
+			continue
+		}
 
 		// If the file path is an exact match to a matrix path then it's always
 		// treated as a match - it was requested exactly
@@ -74,13 +112,7 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 			d.StreamListItem(ctx, filePath{Path: i})
 			continue
 		}
-
-		// This file was expanded from the glob, so check it's likely to be
-		// of the right type based on the extension.
-		ext := filepath.Ext(i)
-		if ext == ".tf" {
-			d.StreamListItem(ctx, filePath{Path: i})
-		}
+		d.StreamListItem(ctx, filePath{Path: i})
 	}
 
 	return nil, nil

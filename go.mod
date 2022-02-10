@@ -4,6 +4,7 @@ go 1.17
 
 require (
 	github.com/Checkmarx/kics v1.4.9
+	github.com/bmatcuk/doublestar v1.3.4
 	github.com/turbot/steampipe-plugin-sdk v1.8.3
 	github.com/zclconf/go-cty v1.10.0
 )
@@ -35,7 +36,6 @@ require (
 	github.com/hashicorp/go-version v1.3.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/hashicorp/hcl/v2 v2.10.1 // indirect
-	github.com/hashicorp/terraform-json v0.13.0 // indirect
 	github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb // indirect
 	github.com/iancoleman/strcase v0.1.2 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
