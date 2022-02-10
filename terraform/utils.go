@@ -57,7 +57,7 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 			// File system context
 			home, err := os.UserHomeDir()
 			if err != nil {
-				plugin.Logger(ctx).Error("tfConfigList", "os.UserHomeDir error. ~ will not be expanded in paths.", err)
+				plugin.Logger(ctx).Error("utils.tfConfigList", "os.UserHomeDir error. ~ will not be expanded in paths.", err)
 			}
 
 			// Resolve ~ to home dir
@@ -73,7 +73,7 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 		// Get full path
 		fullPath, err := filepath.Abs(i)
 		if err != nil {
-			plugin.Logger(ctx).Error("tfConfigList", "failed to fetch absolute path", err)
+			plugin.Logger(ctx).Error("utils.tfConfigList", "failed to fetch absolute path", err, "path", i)
 			return nil, err
 		}
 
@@ -87,14 +87,14 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 
 	// Sanitize the matches to likely Terraform files
 	for _, i := range matches {
-		// Check file or directory
+		// Check if file or directory
 		fileInfo, err := os.Stat(i)
 		if err != nil {
-			plugin.Logger(ctx).Error("tfConfigList", "error reading file path", err)
+			plugin.Logger(ctx).Error("utils.tfConfigList", "error getting file info", err, "path", i)
 			return nil, err
 		}
 
-		// Ignore, if given path is a directory
+		// Ignore directories
 		if fileInfo.IsDir() {
 			continue
 		}

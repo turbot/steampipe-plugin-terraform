@@ -17,7 +17,7 @@ Install the plugin with [Steampipe](https://steampipe.io):
 steampipe plugin install terraform
 ```
 
-Configure your [config file](https://hub.steampipe.io/plugins/turbot/terraform#configuration).
+Configure your [config file](https://hub.steampipe.io/plugins/turbot/terraform#configuration) to include directories with Terraform configuration files. If no directory is specified, the current working directory will be used.
 
 Run steampipe:
 
