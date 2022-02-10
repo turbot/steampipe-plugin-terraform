@@ -91,7 +91,7 @@ connection "terraform" {
   #  - "./*" matches all files in current working directory.
   #  - "../*" matches all files in parent of current working directory.
   #  - "steampipe*" matches all files starting with "steampipe".
-  # Exact file paths can have any name, i.e. `"/path/to/exact/custom.tf"`.
+  # Exact file paths can have any name, i.e. "/path/to/exact/custom.tf".
   # Default set to current working directory.
   paths = [ "*.tf" ]
 }
