@@ -30,6 +30,19 @@ where
   type = 'aws_iam_role';
 ```
 
+### List AWS IAM `assume_role_policy` Statements
+
+```
+select
+  path,
+  name,
+  (arguments ->> 'assume_role_policy')::jsonb -> 'Statement' as statement
+from
+  terraform_resource
+where
+  type = 'aws_iam_role'
+```
+
 ### Get AMI for each AWS EC2 instance
 
 ```sql
@@ -105,3 +118,4 @@ where
   -- Optional arg that defaults to true
   and (arguments -> 'public_network_access_enabled' is null or (arguments -> 'public_network_access_enabled')::boolean);
 ```
+
