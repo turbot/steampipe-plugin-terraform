@@ -14,7 +14,7 @@ connection "terraform" {
   #  - "/path/to/dir/main.tf" matches a specific file
 
   # If paths includes "*", all files (including non-Terraform configuration files) in
-  # the CWD will be matched, which may cause errors if incompatible filetypes exist
+  # the CWD will be matched, which may cause errors if incompatible file types exist
 
   # Defaults to CWD
   paths = [ "*.tf" ]
