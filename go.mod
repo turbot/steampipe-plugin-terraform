@@ -1,6 +1,6 @@
 module github.com/turbot/steampipe-plugin-terraform
 
-go 1.17
+go 1.18
 
 require (
 	github.com/Checkmarx/kics v1.4.9
