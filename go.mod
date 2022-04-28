@@ -1,11 +1,11 @@
 module github.com/turbot/steampipe-plugin-terraform
 
-go 1.17
+go 1.18
 
 require (
 	github.com/Checkmarx/kics v1.4.9
 	github.com/bmatcuk/doublestar v1.3.4
-	github.com/turbot/steampipe-plugin-sdk v1.8.3
+	github.com/turbot/steampipe-plugin-sdk/v3 v3.1.0
 	github.com/zclconf/go-cty v1.10.0
 )
 
@@ -23,7 +23,7 @@ require (
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/fatih/color v1.10.0 // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
-	github.com/gertd/go-pluralize v0.1.7 // indirect
+	github.com/gertd/go-pluralize v0.2.0 // indirect
 	github.com/getsentry/sentry-go v0.11.0 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/golang/glog v1.0.0 // indirect
@@ -32,12 +32,12 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/gookit/color v1.5.0 // indirect
 	github.com/hashicorp/go-hclog v0.15.0 // indirect
-	github.com/hashicorp/go-plugin v1.4.1 // indirect
-	github.com/hashicorp/go-version v1.3.0 // indirect
+	github.com/hashicorp/go-plugin v1.4.3 // indirect
+	github.com/hashicorp/go-version v1.4.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
-	github.com/hashicorp/hcl/v2 v2.10.1 // indirect
+	github.com/hashicorp/hcl/v2 v2.11.1 // indirect
 	github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb // indirect
-	github.com/iancoleman/strcase v0.1.2 // indirect
+	github.com/iancoleman/strcase v0.2.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/johnfercher/maroto v0.33.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
@@ -75,8 +75,8 @@ require (
 	golang.org/x/sys v0.0.0-20211102061401-a2f17f7b995c // indirect
 	golang.org/x/text v0.3.6 // indirect
 	google.golang.org/genproto v0.0.0-20210828152312-66f60bf46e71 // indirect
-	google.golang.org/grpc v1.41.0 // indirect
-	google.golang.org/protobuf v1.27.1 // indirect
+	google.golang.org/grpc v1.44.0 // indirect
+	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/ini.v1 v1.63.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
