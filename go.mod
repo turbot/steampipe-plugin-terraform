@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/Checkmarx/kics v1.4.9
 	github.com/bmatcuk/doublestar v1.3.4
-	github.com/turbot/steampipe-plugin-sdk/v3 v3.3.1
+	github.com/turbot/steampipe-plugin-sdk/v3 v3.3.2
 	github.com/zclconf/go-cty v1.10.0
 )
 
