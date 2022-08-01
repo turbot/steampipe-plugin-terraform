@@ -15,7 +15,7 @@ import (
 
 func tableTerraformDataSource(ctx context.Context) *plugin.Table {
 	return &plugin.Table{
-		Name:        "terraform_data source",
+		Name:        "terraform_data_source",
 		Description: "Terraform data source information.",
 		List: &plugin.ListConfig{
 			ParentHydrate: tfConfigList,
