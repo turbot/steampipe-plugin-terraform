@@ -16,7 +16,7 @@ import (
 	"github.com/Checkmarx/kics/pkg/parser"
 	terraformParser "github.com/Checkmarx/kics/pkg/parser/terraform"
 	"github.com/bmatcuk/doublestar"
-	"github.com/turbot/steampipe-plugin-sdk/v3/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v4/plugin"
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
 
