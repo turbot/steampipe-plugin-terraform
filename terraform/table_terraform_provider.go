@@ -48,6 +48,16 @@ func tableTerraformProvider(ctx context.Context) *plugin.Table {
 				Type:        proto.ColumnType_INT,
 			},
 			{
+				Name:        "end_line",
+				Description: "Ending line number.",
+				Type:        proto.ColumnType_INT,
+			},
+			{
+				Name:        "source",
+				Description: "The Block source.",
+				Type:        proto.ColumnType_STRING,
+			},
+			{
 				Name:        "path",
 				Description: "Path to the file.",
 				Type:        proto.ColumnType_STRING,
@@ -60,6 +70,8 @@ type terraformProvider struct {
 	Name      string
 	Path      string
 	StartLine int
+	EndLine   int
+	Source    string
 	Arguments map[string]interface{}
 	Alias     string
 	Version   string
@@ -101,7 +113,7 @@ func listProviders(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 					case []interface{}:
 						for _, providerData := range providers.([]interface{}) {
 							// For each provider, scan its arguments
-							tfProvider, err = buildProvider(ctx, path, providerName, providerData.(model.Document))
+							tfProvider, err = buildProvider(ctx, path, content, providerName, providerData.(model.Document))
 							if err != nil {
 								plugin.Logger(ctx).Error("terraform_provider.listProviders", "build_provider_error", err)
 								return nil, err
@@ -112,7 +124,7 @@ func listProviders(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 						// If only 1 provider has the name, a model.Document is returned
 					case model.Document:
 						// For each provider, scan its arguments
-						tfProvider, err = buildProvider(ctx, path, providerName, providers.(model.Document))
+						tfProvider, err = buildProvider(ctx, path, content, providerName, providers.(model.Document))
 						if err != nil {
 							plugin.Logger(ctx).Error("terraform_provider.listProviders", "build_provider_error", err)
 							return nil, err
@@ -132,22 +144,23 @@ func listProviders(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 	return nil, nil
 }
 
-func buildProvider(ctx context.Context, path string, name string, d model.Document) (terraformProvider, error) {
+func buildProvider(ctx context.Context, path string, content []byte, name string, d model.Document) (terraformProvider, error) {
 	var tfProvider terraformProvider
 	tfProvider.Path = path
 	tfProvider.Name = name
 	tfProvider.Arguments = make(map[string]interface{})
 
-	// The starting line number is stored in "_kics__default"
-	kicsLines := d["_kics_lines"]
-	if kicsLines != nil {
-		linesMap := kicsLines.(map[string]model.LineObject)
-		defaultLine := linesMap["_kics__default"]
-		tfProvider.StartLine = defaultLine.Line
-	}
-
 	// Remove all "_kics" arguments
 	sanitizeDocument(d)
+
+	start, end, source, err := getBlock(ctx, path, content, "provider", []string{name})
+	if err != nil {
+		plugin.Logger(ctx).Error("terraform_provider.buildProvider", "getBlock", err)
+		return tfProvider, err
+	}
+	tfProvider.StartLine = start.Line
+	tfProvider.EndLine = end.Line
+	tfProvider.Source = source
 
 	for k, v := range d {
 		switch k {
