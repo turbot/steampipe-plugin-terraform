@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
@@ -15,8 +14,7 @@ import (
 	"github.com/Checkmarx/kics/pkg/model"
 	"github.com/Checkmarx/kics/pkg/parser"
 	terraformParser "github.com/Checkmarx/kics/pkg/parser/terraform"
-	"github.com/bmatcuk/doublestar"
-	"github.com/turbot/steampipe-plugin-sdk/v4/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
 
@@ -34,13 +32,13 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 	// If the path was requested through qualifier then match it exactly. Globs
 	// are not supported in this context since the output value for the column
 	// will never match the requested value.
-	quals := d.KeyColumnQuals
+	quals := d.EqualsQuals
 	if quals["path"] != nil {
 		d.StreamListItem(ctx, filePath{Path: quals["path"].GetStringValue()})
 		return nil, nil
 	}
 
-	// #2 - Glob paths in config
+	// #2 - paths in config
 
 	// Fail if no paths are specified
 	terraformConfig := GetConfig(d.Connection)
@@ -52,37 +50,13 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 	var matches []string
 	paths := terraformConfig.Paths
 	for _, i := range paths {
-		// Check to resolve ~ to home dir
-		if strings.HasPrefix(i, "~") {
-			// File system context
-			home, err := os.UserHomeDir()
-			if err != nil {
-				plugin.Logger(ctx).Error("utils.tfConfigList", "os.UserHomeDir error. ~ will not be expanded in paths.", err)
-			}
 
-			// Resolve ~ to home dir
-			if home != "" {
-				if i == "~" {
-					i = home
-				} else if strings.HasPrefix(i, "~/") {
-					i = filepath.Join(home, i[2:])
-				}
-			}
-		}
-
-		// Get full path
-		fullPath, err := filepath.Abs(i)
+		// List the files in the given source directory
+		files, err := d.GetSourceFiles(i)
 		if err != nil {
-			plugin.Logger(ctx).Error("utils.tfConfigList", "failed to fetch absolute path", err, "path", i)
 			return nil, err
 		}
-
-		iMatches, err := doublestar.Glob(fullPath)
-		if err != nil {
-			// Fail if any path is an invalid glob
-			return nil, fmt.Errorf("Path is not a valid glob: %s", i)
-		}
-		matches = append(matches, iMatches...)
+		matches = append(matches, files...)
 	}
 
 	// Sanitize the matches to likely Terraform files
