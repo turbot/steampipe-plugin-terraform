@@ -2,13 +2,9 @@ module github.com/turbot/steampipe-plugin-terraform
 
 go 1.19
 
-replace github.com/turbot/steampipe-plugin-sdk/v5 => github.com/turbot/steampipe-plugin-sdk/v5 v5.0.0-20220921100922-6e9a3b5682c5
-
-replace github.com/turbot/go-kit => github.com/turbot/go-kit v0.2.2-0.20220921093342-22eefbb3baf7
-
 require (
 	github.com/Checkmarx/kics v1.4.9
-	github.com/turbot/steampipe-plugin-sdk/v5 v5.0.0-dev.4
+	github.com/turbot/steampipe-plugin-sdk/v5 v5.0.0-dev.7
 	github.com/zclconf/go-cty v1.10.0
 )
 
@@ -103,7 +99,7 @@ require (
 	github.com/tdewolff/minify/v2 v2.9.22 // indirect
 	github.com/tdewolff/parse/v2 v2.5.21 // indirect
 	github.com/tkrajina/go-reflector v0.5.4 // indirect
-	github.com/turbot/go-kit v0.2.2-0.20220920035719-9dab72f47520 // indirect
+	github.com/turbot/go-kit v0.5.0-rc.1 // indirect
 	github.com/ulikunitz/xz v0.5.8 // indirect
 	github.com/xo/terminfo v0.0.0-20210125001918-ca9a967f8778 // indirect
 	go.opencensus.io v0.23.0 // indirect
