@@ -2,7 +2,7 @@ module github.com/turbot/steampipe-plugin-terraform
 
 go 1.19
 
-replace github.com/turbot/steampipe-plugin-sdk/v5 => ../../sdks/steampipe-plugin-sdk
+replace github.com/turbot/steampipe-plugin-sdk/v5 => github.com/turbot/steampipe-plugin-sdk/v5 v5.0.0-20220921035327-b1172ee29e76
 
 require (
 	github.com/Checkmarx/kics v1.4.9

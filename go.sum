@@ -1489,6 +1489,8 @@ github.com/tonistiigi/units v0.0.0-20180711220420-6950e57a87ea/go.mod h1:WPnis/6
 github.com/tonistiigi/vt100 v0.0.0-20210615222946-8066bb97264f/go.mod h1:ulncasL3N9uLrVann0m+CDlJKWsIAP34MPcOJF6VRvc=
 github.com/turbot/go-kit v0.2.2-0.20220920035719-9dab72f47520 h1:bGDyobucgTLEcNFt4hAWvtfcAikdpbhhrYNa9XfSKlY=
 github.com/turbot/go-kit v0.2.2-0.20220920035719-9dab72f47520/go.mod h1:wbYT3zaI9Jb6+V99IgnW9Yx69995WDeoiLxVVZPh3/Y=
+github.com/turbot/steampipe-plugin-sdk/v5 v5.0.0-20220921035327-b1172ee29e76 h1:oT/haYJDLnOqhxtbuzEpOxYJeAPG40bK1hrHEpZ35+E=
+github.com/turbot/steampipe-plugin-sdk/v5 v5.0.0-20220921035327-b1172ee29e76/go.mod h1:ariR4lJEYY8MKrGyLvA8wrH81wcL7na6Zmmun3SPjEI=
 github.com/uber/jaeger-client-go v2.25.0+incompatible/go.mod h1:WVhlPFC8FDjOFMMWRy2pZqQJSXxYSwNYOkTr/Z6d3Kk=
 github.com/uber/jaeger-lib v2.2.0+incompatible/go.mod h1:ComeNDZlWwrWnDv8aPp0Ba6+uUTzImX/AauajbLI56U=
 github.com/ugorji/go v1.1.4/go.mod h1:uQMGLiO92mf5W77hV/PUCpI3pbzQx3CRekS0kk+RGrc=
