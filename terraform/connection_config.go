@@ -6,7 +6,7 @@ import (
 )
 
 type terraformConfig struct {
-	Paths []string `cty:"paths"`
+	Paths []string `cty:"paths" steampipe:"watch"`
 }
 
 var ConfigSchema = map[string]*schema.Attribute{
