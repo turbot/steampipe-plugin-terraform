@@ -86,24 +86,47 @@ connection "terraform" {
   # Paths is a list of locations to search for Terraform configuration files
   # All paths are resolved relative to the current working directory (CWD)
   # Wildcard based searches are supported, including recursive searches
-
-  # For example:
-  #  - "*.tf" matches all Terraform configuration files in the CWD
-  #  - "**/*.tf" matches all Terraform configuration files in the CWD and all sub-directories
-  #  - "../*.tf" matches all Terraform configuration files in the CWD's parent directory
-  #  - "steampipe*.tf" matches all Terraform configuration files starting with "steampipe" in the CWD
-  #  - "/path/to/dir/*.tf" matches all Terraform configuration files in a specific directory
-  #  - "/path/to/dir/main.tf" matches a specific file
-
-  # If paths includes "*", all files (including non-Terraform configuration files) in
-  # the CWD will be matched, which may cause errors if incompatible file types exist
-
   # Defaults to CWD
   paths = [ "*.tf" ]
 }
 ```
 
-- `paths` - A list of directory paths to search for Terraform files. Paths are resolved relative to the current working directory. Paths may [include wildcards](https://pkg.go.dev/path/filepath#Match) and also support `**` for recursive matching. Defaults to the current working directory.
+### Setting up paths
+
+The argument `paths` in the config is a list of directory paths, a GitHub repository URL, or a S3 URL to search for Terraform files. Paths may [include wildcards](https://pkg.go.dev/path/filepath#Match) and also support `**` for recursive matching. Defaults to the current working directory.
+
+#### Configuring local file paths
+  
+You can define a list of local directory paths to search for terraform files. Paths are resolved relative to the current working directory. For example:
+
+- `*.tf` matches all Terraform configuration files in the CWD.
+- `**/*.tf` matches all Terraform configuration files in the CWD and all sub-directories.
+- `../*.tf` matches all Terraform configuration files in the CWD's parent directory.
+- `steampipe*.tf` matches all Terraform configuration files starting with "steampipe" in the CWD.
+- `/path/to/dir/*.tf` matches all Terraform configuration files in a specific directory. For example:
+  - `~/*.tf` matches all Terraform configuration files in the home directory.
+  - `~/**/*.tf` matches all Terraform configuration files recursively in the home directory.
+- `/path/to/dir/main.tf` matches a specific file.
+
+**NOTE:** If paths includes `*`, all files (including non-Terraform configuration files) in the CWD will be matched, which may cause errors if incompatible file types exist.
+
+#### Configuring GitHub URLs
+
+You can define a list of URL as input to search for terraform files from a variety of protocols. For example:
+
+- `github.com/turbot/polygoat//*.tf` matches all top-level Terraform configuration files in the specified github repository.
+- `github.com/turbot/polygoat//**/*tf` matches all Terraform configuration files in the specified github repository and all sub-directories.
+- `github.com/turbot/polygoat?ref=fix_7677//**/*tf` matches all Terraform configuration files in the specific tag of github repository.
+
+If you want to download only a specific subdirectory from a downloaded directory, you can specify a subdirectory after a double-slash (`//`).
+
+- `github.com/turbot/polygoat//testing_frameworks/steampipe_mod_benchmark//*.tf` matches all Terraform configuration files in the specific folder of a github repo.
+
+#### Configuring S3 URLs
+
+You can also pass a S3 bucket URL to search all Terraform configuration files stored in the specified S3 bucket. For example:
+
+- `s3::https://s3.amazonaws.com/bucket/terraform_examples//**/*.tf` matches all the Terraform configuration files recursively.
 
 ## Get involved
 
