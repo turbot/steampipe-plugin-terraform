@@ -93,10 +93,25 @@ connection "terraform" {
 
 ### Setting up paths
 
-The argument `paths` in the config is a list of directory paths, a GitHub repository URL, or a S3 URL to search for Terraform files. Paths may [include wildcards](https://pkg.go.dev/path/filepath#Match) and also support `**` for recursive matching. Defaults to the current working directory.
+The argument `paths` in the config is a list of directory paths, a GitHub repository URL, or a S3 URL to search for Terraform files. Paths may [include wildcards](https://pkg.go.dev/path/filepath#Match) and also support `**` for recursive matching. Defaults to the current working directory. For example:
+
+```hcl
+connection "terraform" {
+  plugin = "terraform"
+
+  paths = [
+    "*.tf",
+    "~/*.tf",
+    "github.com/turbot/polygoat//*.tf",
+    "github.com/turbot/polygoat//testing_frameworks/steampipe_mod_benchmark//*.tf",
+    "git::https://github.com/turbot/steampipe-plugin-alicloud.git//alicloud-test/tests/alicloud_account/*.tf",
+    "s3::https://s3.amazonaws.com/bucket/terraform_examples//**/*.tf"
+  ]
+}
+```
 
 #### Configuring local file paths
-  
+
 You can define a list of local directory paths to search for terraform files. Paths are resolved relative to the current working directory. For example:
 
 - `*.tf` matches all Terraform configuration files in the CWD.
@@ -108,6 +123,14 @@ You can define a list of local directory paths to search for terraform files. Pa
   - `~/**/*.tf` matches all Terraform configuration files recursively in the home directory.
 - `/path/to/dir/main.tf` matches a specific file.
 
+```hcl
+connection "terraform" {
+  plugin = "terraform"
+
+  paths = [ "*.tf", "~/*.tf", "/path/to/dir/main.tf" ]
+}
+```
+
 **NOTE:** If paths includes `*`, all files (including non-Terraform configuration files) in the CWD will be matched, which may cause errors if incompatible file types exist.
 
 #### Configuring GitHub URLs
@@ -117,16 +140,33 @@ You can define a list of URL as input to search for terraform files from a varie
 - `github.com/turbot/polygoat//*.tf` matches all top-level Terraform configuration files in the specified github repository.
 - `github.com/turbot/polygoat//**/*tf` matches all Terraform configuration files in the specified github repository and all sub-directories.
 - `github.com/turbot/polygoat?ref=fix_7677//**/*tf` matches all Terraform configuration files in the specific tag of github repository.
+- `git::https://github.com/turbot/steampipe-plugin-alicloud.git//alicloud-test/tests/alicloud_account/*.tf` matches all Terraform configuration files in the given HTTP URL using the Git protocol.
 
 If you want to download only a specific subdirectory from a downloaded directory, you can specify a subdirectory after a double-slash (`//`).
 
 - `github.com/turbot/polygoat//testing_frameworks/steampipe_mod_benchmark//*.tf` matches all Terraform configuration files in the specific folder of a github repo.
+
+```hcl
+connection "terraform" {
+  plugin = "terraform"
+
+  paths = [ "github.com/turbot/polygoat//*.tf", "github.com/turbot/polygoat//testing_frameworks/steampipe_mod_benchmark//*.tf", "git::https://github.com/turbot/steampipe-plugin-alicloud.git//alicloud-test/tests/alicloud_account/*.tf" ]
+}
+```
 
 #### Configuring S3 URLs
 
 You can also pass a S3 bucket URL to search all Terraform configuration files stored in the specified S3 bucket. For example:
 
 - `s3::https://s3.amazonaws.com/bucket/terraform_examples//**/*.tf` matches all the Terraform configuration files recursively.
+
+```hcl
+connection "terraform" {
+  plugin = "terraform"
+
+  paths = [ "s3::https://s3.amazonaws.com/bucket/terraform_examples//**/*.tf" ]
+}
+```
 
 ## Get involved
 
