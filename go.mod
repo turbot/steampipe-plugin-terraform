@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/Checkmarx/kics v1.4.9
 	github.com/hashicorp/hcl/v2 v2.12.0
-	github.com/turbot/steampipe-plugin-sdk/v5 v5.0.0-dev.8
+	github.com/turbot/steampipe-plugin-sdk/v5 v5.0.0-alpha.1
 	github.com/zclconf/go-cty v1.10.0
 )
 

@@ -104,7 +104,7 @@ connection "terraform" {
     "~/*.tf",
     "github.com/turbot/polygoat//*.tf",
     "github.com/turbot/polygoat//testing_frameworks/steampipe_mod_benchmark//*.tf",
-    "git::https://github.com/turbot/steampipe-plugin-alicloud.git//alicloud-test/tests/alicloud_account/*.tf",
+    "git::https://github.com/turbot/steampipe-plugin-alicloud.git//alicloud-test/tests/alicloud_account//*.tf",
     "s3::https://s3.amazonaws.com/bucket/terraform_examples//**/*.tf"
   ]
 }
@@ -140,7 +140,7 @@ You can define a list of URL as input to search for terraform files from a varie
 - `github.com/turbot/polygoat//*.tf` matches all top-level Terraform configuration files in the specified github repository.
 - `github.com/turbot/polygoat//**/*tf` matches all Terraform configuration files in the specified github repository and all sub-directories.
 - `github.com/turbot/polygoat?ref=fix_7677//**/*tf` matches all Terraform configuration files in the specific tag of github repository.
-- `git::https://github.com/turbot/steampipe-plugin-alicloud.git//alicloud-test/tests/alicloud_account/*.tf` matches all Terraform configuration files in the given HTTP URL using the Git protocol.
+- `git::https://github.com/turbot/steampipe-plugin-alicloud.git//alicloud-test/tests/alicloud_account//*.tf` matches all Terraform configuration files in the given HTTP URL using the Git protocol.
 
 If you want to download only a specific subdirectory from a downloaded directory, you can specify a subdirectory after a double-slash (`//`).
 
@@ -150,7 +150,7 @@ If you want to download only a specific subdirectory from a downloaded directory
 connection "terraform" {
   plugin = "terraform"
 
-  paths = [ "github.com/turbot/polygoat//*.tf", "github.com/turbot/polygoat//testing_frameworks/steampipe_mod_benchmark//*.tf", "git::https://github.com/turbot/steampipe-plugin-alicloud.git//alicloud-test/tests/alicloud_account/*.tf" ]
+  paths = [ "github.com/turbot/polygoat//*.tf", "github.com/turbot/polygoat//testing_frameworks/steampipe_mod_benchmark//*.tf", "git::https://github.com/turbot/steampipe-plugin-alicloud.git//alicloud-test/tests/alicloud_account//*.tf" ]
 }
 ```
 
