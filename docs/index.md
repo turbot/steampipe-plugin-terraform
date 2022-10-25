@@ -105,7 +105,7 @@ connection "terraform" {
     "github.com/turbot/polygoat//*.tf",
     "github.com/turbot/polygoat//testing_frameworks/steampipe_mod_benchmark//*.tf",
     "git::https://github.com/turbot/steampipe-plugin-alicloud.git//alicloud-test/tests/alicloud_account//*.tf",
-    "s3::https://s3.amazonaws.com/bucket/terraform_examples//**/*.tf"
+    "s3::https://bucket.s3.ap-southeast-1.amazonaws.com/terraform_examples//**/*.tf"
   ]
 }
 ```
@@ -158,13 +158,13 @@ connection "terraform" {
 
 You can also pass a S3 bucket URL to search all Terraform configuration files stored in the specified S3 bucket. For example:
 
-- `s3::https://s3.amazonaws.com/bucket/terraform_examples//**/*.tf` matches all the Terraform configuration files recursively.
+- `s3::https://bucket.s3.ap-southeast-1.amazonaws.com/terraform_examples//**/*.tf` matches all the Terraform configuration files recursively.
 
 ```hcl
 connection "terraform" {
   plugin = "terraform"
 
-  paths = [ "s3::https://s3.amazonaws.com/bucket/terraform_examples//**/*.tf" ]
+  paths = [ "s3::https://bucket.s3.ap-southeast-1.amazonaws.com/terraform_examples//**/*.tf" ]
 }
 ```
 
