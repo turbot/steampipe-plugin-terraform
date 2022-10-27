@@ -93,7 +93,7 @@ connection "terraform" {
 
 ### Setting up paths
 
-The argument `paths` in the config is a list of directory paths, a GitHub repository URL, or a S3 URL to search for Terraform files. Paths may [include wildcards](https://pkg.go.dev/path/filepath#Match) and also support `**` for recursive matching. Defaults to the current working directory. For example:
+The argument `paths` in the config is a list of directory paths, GitHub URLs, GilLab URLs, BitBucket URLs or a S3 URL to search for Terraform files. Paths may [include wildcards](https://pkg.go.dev/path/filepath#Match) and also support `**` for recursive matching. Defaults to the current working directory. For example:
 
 ```hcl
 connection "terraform" {
@@ -105,6 +105,8 @@ connection "terraform" {
     "github.com/turbot/polygoat//*.tf",
     "github.com/turbot/polygoat//testing_frameworks/steampipe_mod_benchmark//*.tf",
     "git::https://github.com/turbot/steampipe-plugin-alicloud.git//alicloud-test/tests/alicloud_account//*.tf",
+    "bitbucket.org/YourTeamOrUser/YourRepository//YourFolder//*.tf",
+    "gitlab.com/YourProject/YourRepository//YourFolder//*.tf",
     "s3::https://bucket.s3.ap-southeast-1.amazonaws.com/terraform_examples//**/*.tf"
   ]
 }
@@ -133,9 +135,9 @@ connection "terraform" {
 
 **NOTE:** If paths includes `*`, all files (including non-Terraform configuration files) in the CWD will be matched, which may cause errors if incompatible file types exist.
 
-#### Configuring GitHub URLs
+#### Configuring GitHub/GitLab/BitBucket URLs
 
-You can define a list of URL as input to search for terraform files from a variety of protocols. For example:
+You can define a list of GitHub URL as input to search for terraform files from a variety of protocols. For example:
 
 - `github.com/turbot/polygoat//*.tf` matches all top-level Terraform configuration files in the specified github repository.
 - `github.com/turbot/polygoat//**/*tf` matches all Terraform configuration files in the specified github repository and all sub-directories.
@@ -150,21 +152,72 @@ If you want to download only a specific subdirectory from a downloaded directory
 connection "terraform" {
   plugin = "terraform"
 
-  paths = [ "github.com/turbot/polygoat//*.tf", "github.com/turbot/polygoat//testing_frameworks/steampipe_mod_benchmark//*.tf", "git::https://github.com/turbot/steampipe-plugin-alicloud.git//alicloud-test/tests/alicloud_account//*.tf" ]
+  paths = [
+    "github.com/turbot/polygoat//*.tf",
+    "github.com/turbot/polygoat//testing_frameworks/steampipe_mod_benchmark//*.tf",
+    "git::https://github.com/turbot/steampipe-plugin-alicloud.git//alicloud-test/tests/alicloud_account//*.tf"
+  ]
 }
 ```
 
-#### Configuring S3 URLs
-
-You can also pass a S3 bucket URL to search all Terraform configuration files stored in the specified S3 bucket. For example:
-
-- `s3::https://bucket.s3.ap-southeast-1.amazonaws.com/terraform_examples//**/*.tf` matches all the Terraform configuration files recursively.
+Similarly, you can also define a list of GitLab and BitBucket URLs to search for the Terraform configuration files. For example:
 
 ```hcl
 connection "terraform" {
   plugin = "terraform"
 
-  paths = [ "s3::https://bucket.s3.ap-southeast-1.amazonaws.com/terraform_examples//**/*.tf" ]
+  paths = [
+    "bitbucket.org/YourTeamOrUser/YourRepository//YourFolder//*.tf",
+    "bitbucket.org/YourTeamOrUser/YourRepository//**/*.tf",
+    "gitlab.com/YourProject/YourRepository//YourFolder//*.tf",
+    "gitlab.com/YourProject/YourRepository//**/*.tf"
+  ]
+}
+```
+
+#### Configuring S3 URLs
+
+As a part of reading files from remote, you can also query all Terraform configuration files stored inside a S3 bucket (public or private) using the URL. For example:
+
+##### Accessing a private bucket
+
+Using this plugin, you can query the files inside a private S3 bucket. S3 takes various access configurations in the URL. For example:
+
+- `aws_access_key_id` - AWS access key.
+- `aws_access_key_secret` - AWS access key secret.
+- `aws_access_token` - AWS access token if this is being used.
+- `aws_profile` - Use this profile from local `~/.aws/config`. Takes priority over the other three.
+
+You can use any of the above credential option in the URL path to authenticate your request. For example:
+
+```hcl
+connection "terraform" {
+  plugin = "terraform"
+
+  paths = [
+    "<bucket-name>.s3.amazonaws.com/<YOUR_FOLDER>?aws_access_key_id=<AWS_ACCESS_KEY>&aws_access_key_secret=<AWS_ACCESS_KEY_SECRET>&region=<region-code>//*.tf",
+    "<bucket-name>.s3.amazonaws.com/<YOUR_FOLDER>?aws_profile=<AWS_PROFILE>&region=<region-code>//*.tf",
+    "<bucket-name>.s3-<region-code>.amazonaws.com/<YOUR_FOLDER>?aws_profile=<AWS_PROFILE>//**/*.tf",
+    "s3::<bucket-name>.s3.amazonaws.com/<YOUR_FOLDER>/<YOUR_FILE>?aws_profile=<AWS_PROFILE>&region=<region-code>"
+  ]
+}
+```
+
+**NOTE:** Make sure the credentials passed is valid or have proper access to list the bucket and list objects inside it, otherwise, the query will fail with an error code `403`.
+
+##### Accessing a public bucket
+
+You can query any public S3 bucket directly using the URL without passing any credentials. For example:
+
+```hcl
+connection "terraform" {
+  plugin = "terraform"
+
+  paths = [
+    "s3::<bucket_name>.s3-<region-code>.amazonaws.com/<YOUR_FOLDER>//*.tf",
+    "s3::https://<bucket_name>.s3.<region-code>.amazonaws.com/<YOUR_FOLDER>//**/*.tf",
+    "s3::https://<bucket_name>.s3.<region-code>.amazonaws.com/<YOUR_FILE>"
+  ]
 }
 ```
 
