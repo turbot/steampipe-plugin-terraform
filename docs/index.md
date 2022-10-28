@@ -93,7 +93,15 @@ connection "terraform" {
 
 ### Setting up paths
 
-The argument `paths` in the config is a list of directory paths, GitHub URLs, GilLab URLs, BitBucket URLs or a S3 URL to search for Terraform files. Paths may [include wildcards](https://pkg.go.dev/path/filepath#Match) and also support `**` for recursive matching. Defaults to the current working directory. For example:
+The argument `paths` in the config is flexible in being able to search Terraform configuration files from a number of different sources (i.e. directory paths, Git, S3, etc.). This removes the burden of knowing how to download from a variety of sources from the implementer.
+
+Paths supports the following protocols:
+
+- [Local files](#configuring-local-file-paths)
+- [Remote repositories](#configuring-remote-repositories-urls)
+- [S3](#configuring-s3-urls)
+
+Paths may [include wildcards](https://pkg.go.dev/path/filepath#Match) and also support `**` for recursive matching. Defaults to the current working directory. For example:
 
 ```hcl
 connection "terraform" {
@@ -102,10 +110,10 @@ connection "terraform" {
   paths = [
     "*.tf",
     "~/*.tf",
-    "github.com/turbot/polygoat//*.tf",
-    "github.com/turbot/polygoat//testing_frameworks/steampipe_mod_benchmark//*.tf",
+    "github.com/turbot/steampipe-plugin-aws//aws-test/tests/aws_acm_certificate//*.tf",
+    "github.com/hashicorp/terraform-guides//infrastructure-as-code//**/*.tf",
     "git::https://github.com/turbot/steampipe-plugin-alicloud.git//alicloud-test/tests/alicloud_account//*.tf",
-    "bitbucket.org/YourTeamOrUser/YourRepository//YourFolder//*.tf",
+    "bitbucket.org/benturrell/terraform-arcgis-portal//modules/shared//*.tf",
     "gitlab.com/YourProject/YourRepository//YourFolder//*.tf",
     "s3::https://bucket.s3.ap-southeast-1.amazonaws.com/terraform_examples//**/*.tf"
   ]
@@ -135,45 +143,49 @@ connection "terraform" {
 
 **NOTE:** If paths includes `*`, all files (including non-Terraform configuration files) in the CWD will be matched, which may cause errors if incompatible file types exist.
 
-#### Configuring GitHub/GitLab/BitBucket URLs
+#### Configuring remote repositories URLs
 
-You can define a list of GitHub URL as input to search for terraform files from a variety of protocols. For example:
+Not only local files, but you can also configure `paths` with any remote repository URLs (i.e. GitHub, BitBucket, GitLab) to search various Terraform configuration files in it.
 
-- `github.com/turbot/polygoat//*.tf` matches all top-level Terraform configuration files in the specified github repository.
-- `github.com/turbot/polygoat//**/*tf` matches all Terraform configuration files in the specified github repository and all sub-directories.
-- `github.com/turbot/polygoat?ref=fix_7677//**/*tf` matches all Terraform configuration files in the specific tag of github repository.
-- `git::https://github.com/turbot/steampipe-plugin-alicloud.git//alicloud-test/tests/alicloud_account//*.tf` matches all Terraform configuration files in the given HTTP URL using the Git protocol.
+You can also mention [wildcards](https://pkg.go.dev/path/filepath#Match) and also support `**` for recursive matching. For example:
+
+- `github.com/turbot/steampipe-plugin-aws//*.tf` matches all top-level Terraform configuration files in the specified repository.
+- `github.com/turbot/steampipe-plugin-aws//**/*tf` matches all Terraform configuration files in the specified repository and all sub-directories.
+- `github.com/turbot/steampipe-plugin-aws?ref=fix_7677//**/*tf` matches all Terraform configuration files in the specific tag of repository.
 
 If you want to download only a specific subdirectory from a downloaded directory, you can specify a subdirectory after a double-slash (`//`).
 
-- `github.com/turbot/polygoat//testing_frameworks/steampipe_mod_benchmark//*.tf` matches all Terraform configuration files in the specific folder of a github repo.
-
 ```hcl
 connection "terraform" {
   plugin = "terraform"
 
-  paths = [
-    "github.com/turbot/polygoat//*.tf",
-    "github.com/turbot/polygoat//testing_frameworks/steampipe_mod_benchmark//*.tf",
-    "git::https://github.com/turbot/steampipe-plugin-alicloud.git//alicloud-test/tests/alicloud_account//*.tf"
-  ]
+  paths = [ "github.com/turbot/steampipe-plugin-aws//aws-test/tests/aws_acm_certificate//*.tf" ]
 }
 ```
 
-Similarly, you can also define a list of GitLab and BitBucket URLs to search for the Terraform configuration files. For example:
+Similarly, you can also define a list of GitLab and BitBucket URLs to search for the Terraform configuration files.
 
 ```hcl
 connection "terraform" {
   plugin = "terraform"
 
   paths = [
-    "bitbucket.org/YourTeamOrUser/YourRepository//YourFolder//*.tf",
-    "bitbucket.org/YourTeamOrUser/YourRepository//**/*.tf",
+    "github.com/turbot/steampipe-plugin-aws//**/*tf",
+    "github.com/hashicorp/terraform-guides//infrastructure-as-code//**/*.tf",
+    "bitbucket.org/benturrell/terraform-arcgis-portal//modules/shared//*.tf",
+    "bitbucket.org/benturrell/terraform-arcgis-portal//modules//**/*.tf",
     "gitlab.com/YourProject/YourRepository//YourFolder//*.tf",
     "gitlab.com/YourProject/YourRepository//**/*.tf"
   ]
 }
 ```
+
+You can also use the below URL format to query the files stored inside remote repositories:
+
+- `git::https://github.com/turbot/steampipe-plugin-alicloud.git//alicloud-test/tests/alicloud_account//*.tf`
+- `git::github.com/hashicorp/terraform-guides//infrastructure-as-code//**/*.tf`
+- `git::bitbucket.org/benturrell/terraform-arcgis-portal//modules/shared//*.tf`
+- `git::gitlab.com/YourProject/YourRepository//YourFolder//*.tf`
 
 #### Configuring S3 URLs
 
@@ -195,15 +207,48 @@ connection "terraform" {
   plugin = "terraform"
 
   paths = [
-    "<bucket-name>.s3.amazonaws.com/<YOUR_FOLDER>?aws_access_key_id=<AWS_ACCESS_KEY>&aws_access_key_secret=<AWS_ACCESS_KEY_SECRET>&region=<region-code>//*.tf",
-    "<bucket-name>.s3.amazonaws.com/<YOUR_FOLDER>?aws_profile=<AWS_PROFILE>&region=<region-code>//*.tf",
-    "<bucket-name>.s3-<region-code>.amazonaws.com/<YOUR_FOLDER>?aws_profile=<AWS_PROFILE>//**/*.tf",
-    "s3::<bucket-name>.s3.amazonaws.com/<YOUR_FOLDER>/<YOUR_FILE>?aws_profile=<AWS_PROFILE>&region=<region-code>"
+    "bucket-1.s3.amazonaws.com/test_folder?aws_access_key_id=<AWS_ACCESS_KEY>&aws_access_key_secret=<AWS_ACCESS_KEY_SECRET>&region=<region-code>//*.tf",
+    "bucket-2.s3.amazonaws.com/test_folder?aws_profile=<AWS_PROFILE>&region=<region-code>//*.tf"
   ]
 }
 ```
 
-**NOTE:** Make sure the credentials passed is valid or have proper access to list the bucket and list objects inside it, otherwise, the query will fail with an error code `403`.
+You can also use the below URL format to query the files stored inside remote repositories:
+
+- `bucket-1.s3-us-east-1.amazonaws.com/test_folder?aws_profile=<AWS_PROFILE>//**/*.tf`
+- `s3::bucket-1.s3.amazonaws.com/test_folder/test.tf?aws_profile=<AWS_PROFILE>&region=us-east-1`
+
+**NOTE:**
+
+By default the bucket owner has has full control over the objects in it. If you are not the owner of the bucket that you are trying to query, ask the owner to update the bucket policy with the required access. To run the query you will need a basic read access for bucket and object. You can refer the sample bucket policy mentioned below:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PublicReadBucket",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::123456789012:user/YOUR_USER"
+      },
+      "Action": ["s3:ListBucket"],
+      "Resource": "arn:aws:s3:::test-bucket1"
+    },
+    {
+      "Sid": "PublicReadObject",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::123456789012:user/YOUR_USER"
+      },
+      "Action": ["s3:GetObject", "s3:GetObjectVersion"],
+      "Resource": "arn:aws:s3:::test-bucket1/*"
+    }
+  ]
+}
+```
+
+Also, make sure the credentials/profile passed in the URL are valid, otherwise, the query will fail with an error code `403`.
 
 ##### Accessing a public bucket
 
@@ -214,12 +259,16 @@ connection "terraform" {
   plugin = "terraform"
 
   paths = [
-    "s3::<bucket_name>.s3-<region-code>.amazonaws.com/<YOUR_FOLDER>//*.tf",
-    "s3::https://<bucket_name>.s3.<region-code>.amazonaws.com/<YOUR_FOLDER>//**/*.tf",
-    "s3::https://<bucket_name>.s3.<region-code>.amazonaws.com/<YOUR_FILE>"
+    "s3::bucket-1.s3.us-east-1.amazonaws.com/test_folder//*.tf",
+    "s3::bucket-2.s3.us-east-1.amazonaws.com/test_folder//**/*.tf"
   ]
 }
 ```
+
+You can also use the below URL format to query the files stored inside remote repositories:
+
+- `s3::https://bucket-1.s3-us-east-1.amazonaws.com/test_folder//**/*.tf`
+- `s3::https://bucket-1.s3.us-east-1.amazonaws.com/test.tf`
 
 ## Get involved
 
