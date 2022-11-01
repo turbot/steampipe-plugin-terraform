@@ -151,7 +151,7 @@ You can also mention [wildcards](https://pkg.go.dev/path/filepath#Match) and als
 
 - `github.com/turbot/steampipe-plugin-aws//*.tf` matches all top-level Terraform configuration files in the specified repository.
 - `github.com/turbot/steampipe-plugin-aws//**/*tf` matches all Terraform configuration files in the specified repository and all sub-directories.
-- `github.com/turbot/steampipe-plugin-aws?ref=fix_7677//**/*tf` matches all Terraform configuration files in the specific tag of repository.
+- `github.com/turbot/steampipe-plugin-aws//**/*tf?ref=fix_7677` matches all Terraform configuration files in the specific tag of repository.
 
 If you want to download only a specific subdirectory from a downloaded directory, you can specify a subdirectory after a double-slash (`//`).
 
@@ -207,15 +207,15 @@ connection "terraform" {
   plugin = "terraform"
 
   paths = [
-    "bucket-1.s3.amazonaws.com/test_folder?aws_access_key_id=<AWS_ACCESS_KEY>&aws_access_key_secret=<AWS_ACCESS_KEY_SECRET>&region=<region-code>//*.tf",
-    "bucket-2.s3.amazonaws.com/test_folder?aws_profile=<AWS_PROFILE>&region=<region-code>//*.tf"
+    "bucket-1.s3.amazonaws.com/test_folder//*.tf?aws_access_key_id=<AWS_ACCESS_KEY>&aws_access_key_secret=<AWS_ACCESS_KEY_SECRET>&region=<region-code>",
+    "bucket-2.s3.amazonaws.com/test_folder//*.tf?aws_profile=<AWS_PROFILE>&region=<region-code>"
   ]
 }
 ```
 
 You can also use the below URL format to query the files stored inside remote repositories:
 
-- `bucket-1.s3-us-east-1.amazonaws.com/test_folder?aws_profile=<AWS_PROFILE>//**/*.tf`
+- `bucket-1.s3-us-east-1.amazonaws.com/test_folder//**/*.tf?aws_profile=<AWS_PROFILE>`
 - `s3::bucket-1.s3.amazonaws.com/test_folder/test.tf?aws_profile=<AWS_PROFILE>&region=us-east-1`
 
 **NOTE:**
