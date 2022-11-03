@@ -201,16 +201,12 @@ connection "terraform" {
   plugin = "terraform"
 
   paths = [
-    "bucket-1.s3.amazonaws.com/test_folder//*.tf?aws_access_key_id=<AWS_ACCESS_KEY>&aws_access_key_secret=<AWS_ACCESS_KEY_SECRET>&region=<region-code>",
-    "bucket-2.s3.amazonaws.com/test_folder//*.tf?aws_profile=<AWS_PROFILE>&region=<region-code>"
-    "bucket-3.s3.amazonaws.com/test_folder//*.tf?aws_access_key_id=<AWS_TEMPORARY_ACCESS_KEY>&aws_access_key_secret=<AWS_TEMPORARY_ACCESS_KEY_SECRET>&&region=<region-code>"
+    "s3::https://bucket-1.s3.us-east-1.amazonaws.com/test_folder//*.tf?aws_access_key_id=<AWS_ACCESS_KEY>&aws_access_key_secret=<AWS_ACCESS_KEY_SECRET>",
+    "s3::https://bucket-2.s3.us-east-1.amazonaws.com/test_folder//*.tf?aws_profile=<AWS_PROFILE>",
+    "s3::https://bucket-3.s3.us-east-1.amazonaws.com/test_folder//*.tf?aws_access_key_id=<AWS_TEMPORARY_ACCESS_KEY>&aws_access_key_secret=<AWS_TEMPORARY_ACCESS_KEY_SECRET>"&aws_access_token=<AWS_SESSION_TOKEN>
   ]
 }
 ```
-
-You can also use the below format to include the bucket region in the URL path:
-
-- `bucket-1.s3-us-east-1.amazonaws.com/test_folder//**/*.tf?aws_profile=<AWS_PROFILE>`
 
 **NOTE:**
 
@@ -257,8 +253,8 @@ connection "terraform" {
   plugin = "terraform"
 
   paths = [
-    "s3::bucket-1.s3.us-east-1.amazonaws.com/test_folder//*.tf",
-    "s3::bucket-2.s3.us-east-1.amazonaws.com/test_folder//**/*.tf"
+    "s3::https://bucket-1.s3.us-east-1.amazonaws.com/test_folder//*.tf",
+    "s3::https://bucket-2.s3.us-east-1.amazonaws.com/test_folder//**/*.tf"
   ]
 }
 ```
