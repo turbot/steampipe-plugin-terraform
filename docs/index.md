@@ -203,7 +203,7 @@ connection "terraform" {
   paths = [
     "s3::https://bucket-1.s3.us-east-1.amazonaws.com/test_folder//*.tf?aws_access_key_id=<AWS_ACCESS_KEY>&aws_access_key_secret=<AWS_ACCESS_KEY_SECRET>",
     "s3::https://bucket-2.s3.us-east-1.amazonaws.com/test_folder//*.tf?aws_profile=<AWS_PROFILE>",
-    "s3::https://bucket-3.s3.us-east-1.amazonaws.com/test_folder//*.tf?aws_access_key_id=<AWS_TEMPORARY_ACCESS_KEY>&aws_access_key_secret=<AWS_TEMPORARY_ACCESS_KEY_SECRET>"&aws_access_token=<AWS_SESSION_TOKEN>
+    "s3::https://bucket-3.s3.us-east-1.amazonaws.com/test_folder//*.tf?aws_access_key_id=<AWS_TEMPORARY_ACCESS_KEY>&aws_access_key_secret=<AWS_TEMPORARY_ACCESS_KEY_SECRET>&aws_access_token=<AWS_SESSION_TOKEN>"
   ]
 }
 ```
