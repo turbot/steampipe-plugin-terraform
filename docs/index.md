@@ -98,7 +98,7 @@ The argument `paths` in the config is flexible in being able to search Terraform
 Paths supports the following protocols:
 
 - [Local files](#configuring-local-file-paths)
-- [Remote repositories](#configuring-remote-repositories-urls)
+- [Remote Git repositories](#configuring-remote-git-repositories-urls)
 - [S3](#configuring-s3-urls)
 
 Paths may [include wildcards](https://pkg.go.dev/path/filepath#Match) and also support `**` for recursive matching. Defaults to the current working directory. For example:
@@ -112,7 +112,6 @@ connection "terraform" {
     "~/*.tf",
     "github.com/turbot/steampipe-plugin-aws//aws-test/tests/aws_acm_certificate//*.tf",
     "github.com/hashicorp/terraform-guides//infrastructure-as-code//**/*.tf",
-    "git::https://github.com/turbot/steampipe-plugin-alicloud.git//alicloud-test/tests/alicloud_account//*.tf",
     "bitbucket.org/benturrell/terraform-arcgis-portal//modules/shared//*.tf",
     "gitlab.com/YourProject/YourRepository//YourFolder//*.tf",
     "s3::https://bucket.s3.ap-southeast-1.amazonaws.com/terraform_examples//**/*.tf"
@@ -143,7 +142,7 @@ connection "terraform" {
 
 **NOTE:** If paths includes `*`, all files (including non-Terraform configuration files) in the CWD will be matched, which may cause errors if incompatible file types exist.
 
-#### Configuring remote repositories URLs
+#### Configuring remote Git repositories URLs
 
 Not only local files, but you can also configure `paths` with any remote repository URLs (i.e. GitHub, BitBucket, GitLab) to search various Terraform configuration files in it.
 
@@ -174,18 +173,11 @@ connection "terraform" {
     "github.com/hashicorp/terraform-guides//infrastructure-as-code//**/*.tf",
     "bitbucket.org/benturrell/terraform-arcgis-portal//modules/shared//*.tf",
     "bitbucket.org/benturrell/terraform-arcgis-portal//modules//**/*.tf",
-    "gitlab.com/YourProject/YourRepository//YourFolder//*.tf",
-    "gitlab.com/YourProject/YourRepository//**/*.tf"
+    "gitlab.com/gitlab-org/configure/examples/gitlab-terraform-aws//*.tf",
+    "gitlab.com/gitlab-org/configure/examples/gitlab-terraform-aws//**/*.tf"
   ]
 }
 ```
-
-You can also use the below URL format to query the files stored inside remote repositories:
-
-- `git::https://github.com/turbot/steampipe-plugin-alicloud.git//alicloud-test/tests/alicloud_account//*.tf`
-- `git::github.com/hashicorp/terraform-guides//infrastructure-as-code//**/*.tf`
-- `git::bitbucket.org/benturrell/terraform-arcgis-portal//modules/shared//*.tf`
-- `git::gitlab.com/YourProject/YourRepository//YourFolder//*.tf`
 
 #### Configuring S3 URLs
 
@@ -200,6 +192,8 @@ Using this plugin, you can query the files inside a private S3 bucket. S3 takes 
 - `aws_access_token` - AWS access token if this is being used.
 - `aws_profile` - Use this profile from local `~/.aws/config`. Takes priority over the other three.
 
+**Note:** The above configuration can also be set using the standard AWS environment variables. If set, it will take configurations from there.
+
 You can use any of the above credential option in the URL path to authenticate your request. For example:
 
 ```hcl
@@ -209,40 +203,38 @@ connection "terraform" {
   paths = [
     "bucket-1.s3.amazonaws.com/test_folder//*.tf?aws_access_key_id=<AWS_ACCESS_KEY>&aws_access_key_secret=<AWS_ACCESS_KEY_SECRET>&region=<region-code>",
     "bucket-2.s3.amazonaws.com/test_folder//*.tf?aws_profile=<AWS_PROFILE>&region=<region-code>"
+    "bucket-3.s3.amazonaws.com/test_folder//*.tf?aws_access_key_id=<AWS_TEMPORARY_ACCESS_KEY>&aws_access_key_secret=<AWS_TEMPORARY_ACCESS_KEY_SECRET>&&region=<region-code>"
   ]
 }
 ```
 
-You can also use the below URL format to query the files stored inside remote repositories:
+You can also use the below format to include the bucket region in the URL path:
 
 - `bucket-1.s3-us-east-1.amazonaws.com/test_folder//**/*.tf?aws_profile=<AWS_PROFILE>`
-- `s3::bucket-1.s3.amazonaws.com/test_folder/test.tf?aws_profile=<AWS_PROFILE>&region=us-east-1`
 
 **NOTE:**
 
-By default the bucket owner has has full control over the objects in it. If you are not the owner of the bucket that you are trying to query, ask the owner to update the bucket policy with the required access. To run the query you will need a basic read access for bucket and object. You can refer the sample bucket policy mentioned below:
+By default, users from the same account where the bucket is created can access the bucket objects if the user has basic S3 read access. If you are not the bucket owner and can't access a bucket, ask the owner to update the bucket policy with the required access. You will need basic read access for the bucket and object to run the query. You can refer to the sample bucket policy mentioned below:
 
 ```json
 {
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "PublicReadBucket",
+      "Sid": "ReadBucketObject",
       "Effect": "Allow",
       "Principal": {
         "AWS": "arn:aws:iam::123456789012:user/YOUR_USER"
       },
-      "Action": ["s3:ListBucket"],
-      "Resource": "arn:aws:s3:::test-bucket1"
-    },
-    {
-      "Sid": "PublicReadObject",
-      "Effect": "Allow",
-      "Principal": {
-        "AWS": "arn:aws:iam::123456789012:user/YOUR_USER"
-      },
-      "Action": ["s3:GetObject", "s3:GetObjectVersion"],
-      "Resource": "arn:aws:s3:::test-bucket1/*"
+      "Action": [
+        "s3:ListBucket",
+        "s3:GetObject",
+        "s3:GetObjectVersion"
+      ],
+      "Resource": [
+        "arn:aws:s3:::test-bucket1",
+        "arn:aws:s3:::test-bucket1/*"
+      ]
     }
   ]
 }
@@ -251,6 +243,12 @@ By default the bucket owner has has full control over the objects in it. If you 
 Also, make sure the credentials/profile passed in the URL are valid, otherwise, the query will fail with an error code `403`.
 
 ##### Accessing a public bucket
+
+Public access granted to buckets and objects allows all the users inside/outside the organization to access the bucket and objects stores inside it. Public access can be granted to buckets and objects through access control lists (ACLs), bucket policies, or both. To identify a public bucket, you can use the below AWS CLI command:
+
+```bash
+aws s3api get-bucket-policy-status --bucket <BUCKET_NAME>
+```
 
 You can query any public S3 bucket directly using the URL without passing any credentials. For example:
 
@@ -264,11 +262,6 @@ connection "terraform" {
   ]
 }
 ```
-
-You can also use the below URL format to query the files stored inside remote repositories:
-
-- `s3::https://bucket-1.s3-us-east-1.amazonaws.com/test_folder//**/*.tf`
-- `s3::https://bucket-1.s3.us-east-1.amazonaws.com/test.tf`
 
 ## Get involved
 
