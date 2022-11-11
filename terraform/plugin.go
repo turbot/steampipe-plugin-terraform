@@ -30,6 +30,7 @@ func Plugin(ctx context.Context) *plugin.Plugin {
 			"terraform_output":      tableTerraformOutput(ctx),
 			"terraform_provider":    tableTerraformProvider(ctx),
 			"terraform_resource":    tableTerraformResource(ctx),
+			"terraform_module":      tableTerraformModule(ctx),
 		},
 	}
 
