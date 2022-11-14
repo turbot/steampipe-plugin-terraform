@@ -84,8 +84,9 @@ connection "terraform" {
   plugin = "terraform"
 
   # Paths is a list of locations to search for Terraform configuration files
-  # All paths are resolved relative to the current working directory (CWD)
+  # Paths can be configured with a local directory, a remote Git repository URL, or an S3 bucket URL
   # Wildcard based searches are supported, including recursive searches
+  # All paths are resolved relative to the current working directory (CWD)
   # Defaults to CWD
   paths = [ "*.tf" ]
 }
@@ -93,15 +94,15 @@ connection "terraform" {
 
 ### Setting up paths
 
-The argument `paths` in the config is flexible in being able to search Terraform configuration files from a number of different sources (i.e. directory paths, Git, S3, etc.). This removes the burden of knowing how to download from a variety of sources from the implementer.
+The argument `paths` in the config is flexible in searching Terraform configuration files from several different sources (i.e. directory paths, Git, S3, etc.). This removes the burden of knowing how to download from various sources from the implementer.
 
-Paths supports the following protocols:
+Paths support the following protocols:
 
 - [Local files](#configuring-local-file-paths)
 - [Remote Git repositories](#configuring-remote-git-repositories-urls)
 - [S3](#configuring-s3-urls)
 
-Paths may [include wildcards](https://pkg.go.dev/path/filepath#Match) and also support `**` for recursive matching. Defaults to the current working directory. For example:
+Paths may [include wildcards](https://pkg.go.dev/path/filepath#Match) and support `**` for recursive matching. Defaults to the current working directory. For example:
 
 ```hcl
 connection "terraform" {
@@ -114,7 +115,7 @@ connection "terraform" {
     "github.com/hashicorp/terraform-guides//infrastructure-as-code//**/*.tf",
     "bitbucket.org/benturrell/terraform-arcgis-portal//modules/shared//*.tf",
     "gitlab.com/YourProject/YourRepository//YourFolder//*.tf",
-    "s3::https://bucket.s3.ap-southeast-1.amazonaws.com/terraform_examples//**/*.tf"
+    "s3.amazonaws.com/bucket/terraform_examples//**/*.tf"
   ]
 }
 ```
@@ -140,19 +141,19 @@ connection "terraform" {
 }
 ```
 
-**NOTE:** If paths includes `*`, all files (including non-Terraform configuration files) in the CWD will be matched, which may cause errors if incompatible file types exist.
+**Note:** If paths include `*`, all files (including non-Terraform configuration files) in the CWD will be matched, which may cause errors if incompatible file types exist.
 
 #### Configuring remote Git repositories URLs
 
 Not only local files, but you can also configure `paths` with any remote repository URLs (i.e. GitHub, BitBucket, GitLab) to search various Terraform configuration files in it.
 
-You can also mention [wildcards](https://pkg.go.dev/path/filepath#Match) and also support `**` for recursive matching. For example:
+You can also mention [wildcards](https://pkg.go.dev/path/filepath#Match) and support `**` for recursive matching. For example:
 
 - `github.com/turbot/steampipe-plugin-aws//*.tf` matches all top-level Terraform configuration files in the specified repository.
 - `github.com/turbot/steampipe-plugin-aws//**/*tf` matches all Terraform configuration files in the specified repository and all sub-directories.
-- `github.com/turbot/steampipe-plugin-aws//**/*tf?ref=fix_7677` matches all Terraform configuration files in the specific tag of repository.
+- `github.com/turbot/steampipe-plugin-aws//**/*tf?ref=fix_7677` matches all Terraform configuration files in the specific tag of a repository.
 
-If you want to download only a specific subdirectory from a downloaded directory, you can specify a subdirectory after a double-slash (`//`).
+You can specify a subdirectory after a double-slash (`//`) if you want to download only a specific subdirectory from a downloaded directory.
 
 ```hcl
 connection "terraform" {
@@ -162,7 +163,7 @@ connection "terraform" {
 }
 ```
 
-Similarly, you can also define a list of GitLab and BitBucket URLs to search for the Terraform configuration files.
+Similarly, you can define a list of GitLab and BitBucket URLs to search for the Terraform configuration files.
 
 ```hcl
 connection "terraform" {
@@ -181,83 +182,83 @@ connection "terraform" {
 
 #### Configuring S3 URLs
 
-As a part of reading files from remote, you can also query all Terraform configuration files stored inside a S3 bucket (public or private) using the URL. For example:
+As a part of reading files from remote, you can also query all Terraform configuration files stored inside an S3 bucket (public or private) using the URL. For example:
 
-##### Accessing a private bucket
+- **Accessing a private bucket**
 
-Using this plugin, you can query the files inside a private S3 bucket. S3 takes various access configurations in the URL. For example:
+  In order to access your files in a private S3 bucket, you will need to configure your credentials. S3 takes various access configurations in the URL. For example:
 
-- `aws_access_key_id` - AWS access key.
-- `aws_access_key_secret` - AWS access key secret.
-- `aws_access_token` - AWS access token if this is being used.
-- `aws_profile` - Use this profile from local `~/.aws/config`. Takes priority over the other three.
+  - `aws_access_key_id` - AWS access key.
+  - `aws_access_key_secret` - AWS access key secret.
+  - `aws_access_token` - AWS access token if this is being used.
+  - `aws_profile` - Use this profile from local `~/.aws/config`. Takes priority over the other three. Also, make sure that `region` is configured in the config. If not set in the config, `region` will be fetched from the standard environment variable (i.e. `AWS_REGION`).
 
-**Note:** The above configuration can also be set using the standard AWS environment variables. If set, it will take configurations from there.
+  **Note:** You can also set the above configuration using the standard AWS environment variables. If set, it will take configurations from there.
 
-You can use any of the above credential option in the URL path to authenticate your request. For example:
+  You can authenticate your request by using the above credential option in the URL path. For example:
 
-```hcl
-connection "terraform" {
-  plugin = "terraform"
+  ```hcl
+  connection "terraform" {
+    plugin = "terraform"
 
-  paths = [
-    "s3::https://bucket-1.s3.us-east-1.amazonaws.com/test_folder//*.tf?aws_access_key_id=<AWS_ACCESS_KEY>&aws_access_key_secret=<AWS_ACCESS_KEY_SECRET>",
-    "s3::https://bucket-2.s3.us-east-1.amazonaws.com/test_folder//*.tf?aws_profile=<AWS_PROFILE>",
-    "s3::https://bucket-3.s3.us-east-1.amazonaws.com/test_folder//*.tf?aws_access_key_id=<AWS_TEMPORARY_ACCESS_KEY>&aws_access_key_secret=<AWS_TEMPORARY_ACCESS_KEY_SECRET>&aws_access_token=<AWS_SESSION_TOKEN>"
-  ]
-}
-```
+    paths = [
+      "s3.amazonaws.com/bucket/test_folder//*.tf?aws_profile=<AWS_PROFILE>"
+      "s3.amazonaws.com/bucket/test_folder//*.tf?aws_access_key_id=<AWS_ACCESS_KEY>&aws_access_key_secret=<AWS_ACCESS_KEY_SECRET>"
+      "s3.amazonaws.com/bucket/test_folder//*.tf?aws_access_key_id=<AWS_TEMPORARY_ACCESS_KEY>&aws_access_key_secret=<AWS_TEMPORARY_ACCESS_KEY_SECRET>&aws_access_token=<AWS_SESSION_TOKEN>"
+    ]
+  }
+  ```
 
-**NOTE:**
+  **Note:**
 
-By default, users from the same account where the bucket is created can access the bucket objects if the user has basic S3 read access. If you are not the bucket owner and can't access a bucket, ask the owner to update the bucket policy with the required access. You will need basic read access for the bucket and object to run the query. You can refer to the sample bucket policy mentioned below:
+  By default, users from the same account where the bucket is created can access the bucket objects if the user has basic S3 read access. If you are not the bucket owner and can't access a bucket, ask the owner to update the bucket policy with the required access. You will need basic read access for the bucket and object to run the query. You can refer to the sample bucket policy mentioned below:
 
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Sid": "ReadBucketObject",
-      "Effect": "Allow",
-      "Principal": {
-        "AWS": "arn:aws:iam::123456789012:user/YOUR_USER"
-      },
-      "Action": [
-        "s3:ListBucket",
-        "s3:GetObject",
-        "s3:GetObjectVersion"
-      ],
-      "Resource": [
-        "arn:aws:s3:::test-bucket1",
-        "arn:aws:s3:::test-bucket1/*"
-      ]
-    }
-  ]
-}
-```
+  ```json
+  {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "ReadBucketObject",
+        "Effect": "Allow",
+        "Principal": {
+          "AWS": "arn:aws:iam::123456789012:user/YOUR_USER"
+        },
+        "Action": [
+          "s3:ListBucket",
+          "s3:GetObject",
+          "s3:GetObjectVersion"
+        ],
+        "Resource": [
+          "arn:aws:s3:::test-bucket1",
+          "arn:aws:s3:::test-bucket1/*"
+        ]
+      }
+    ]
+  }
+  ```
 
-Also, make sure the credentials/profile passed in the URL are valid, otherwise, the query will fail with an error code `403`.
+  Also, ensure the credentials/profile passed in the URL are valid. Otherwise, the query will fail with an error code `403`.
 
-##### Accessing a public bucket
+- **Accessing a public bucket**
 
-Public access granted to buckets and objects allows all the users inside/outside the organization to access the bucket and objects stores inside it. Public access can be granted to buckets and objects through access control lists (ACLs), bucket policies, or both. To identify a public bucket, you can use the below AWS CLI command:
+  Public access granted to buckets and objects allows all the users inside/outside the organization to access the bucket and objects stored inside it. You can give the public access to buckets and objects through access control lists (ACLs), bucket policies, or both. To identify a public bucket, you can use the below AWS CLI command:
 
-```bash
-aws s3api get-bucket-policy-status --bucket <BUCKET_NAME>
-```
+  ```bash
+  aws s3api get-bucket-policy-status --bucket <BUCKET_NAME>
+  ```
 
-You can query any public S3 bucket directly using the URL without passing any credentials. For example:
+  You can query any public S3 bucket directly using the URL without passing credentials. For example:
 
-```hcl
-connection "terraform" {
-  plugin = "terraform"
+  ```hcl
+  connection "terraform" {
+    plugin = "terraform"
 
-  paths = [
-    "s3::https://bucket-1.s3.us-east-1.amazonaws.com/test_folder//*.tf",
-    "s3::https://bucket-2.s3.us-east-1.amazonaws.com/test_folder//**/*.tf"
-  ]
-}
-```
+    paths = [
+      "s3.amazonaws.com/bucket-1/test_folder//*.tf",
+      "s3.amazonaws.com/bucket-2/test_folder//**/*.tf"
+    ]
+  }
+  ```
 
 ## Get involved
 
