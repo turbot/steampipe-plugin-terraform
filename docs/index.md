@@ -186,14 +186,9 @@ As a part of reading files from remote, you can also query all Terraform configu
 
 - **Accessing a private bucket**
 
-  In order to access your files in a private S3 bucket, you will need to configure your credentials. S3 takes various access configurations in the URL. For example:
+  In order to access your files in a private S3 bucket, you will need to configure your credentials. You can use your configured AWS profile from local `~/.aws/config`, or pass the credentials using the standard AWS environment variables (i.e. `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`).
 
-  - `aws_access_key_id` - AWS access key.
-  - `aws_access_key_secret` - AWS access key secret.
-  - `aws_access_token` - AWS access token if this is being used.
-  - `aws_profile` - Use this profile from local `~/.aws/config`. Takes priority over the other three. Also, make sure that `region` is configured in the config. If not set in the config, `region` will be fetched from the standard environment variable (i.e. `AWS_REGION`).
-
-  **Note:** You can also set the above configuration using the standard AWS environment variables. If set, it will take configurations from there.
+  **Note:** Make sure that `region` is configured in the config. If not set in the config, `region` will be fetched from the standard environment variable (i.e. `AWS_REGION`).
 
   You can authenticate your request by using the above credential option in the URL path. For example:
 
@@ -203,9 +198,7 @@ As a part of reading files from remote, you can also query all Terraform configu
 
     paths = [
       "s3::https://bucket-2.s3.us-east-1.amazonaws.com//*.tf?aws_profile=<AWS_PROFILE>",
-      "s3::https://bucket-2.s3.us-east-1.amazonaws.com/test_folder//*.tf?aws_profile=<AWS_PROFILE>",
-      "s3::https://bucket-1.s3.us-east-1.amazonaws.com/test_folder//*.tf?aws_access_key_id=<AWS_ACCESS_KEY>&aws_access_key_secret=<AWS_ACCESS_KEY_SECRET>",
-      "s3::https://bucket-3.s3.us-east-1.amazonaws.com/test_folder//*.tf?aws_access_key_id=<AWS_TEMPORARY_ACCESS_KEY>&aws_access_key_secret=<AWS_TEMPORARY_ACCESS_KEY_SECRET>&aws_access_token=<AWS_SESSION_TOKEN>"
+      "s3::https://bucket-2.s3.us-east-1.amazonaws.com/test_folder//*.tf?aws_profile=<AWS_PROFILE>"
     ]
   }
   ```
