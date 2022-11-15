@@ -115,7 +115,7 @@ connection "terraform" {
     "github.com/hashicorp/terraform-guides//infrastructure-as-code//**/*.tf",
     "bitbucket.org/benturrell/terraform-arcgis-portal//modules/shared//*.tf",
     "gitlab.com/YourProject/YourRepository//YourFolder//*.tf",
-    "s3.amazonaws.com/bucket/terraform_examples//**/*.tf"
+    "s3::https://bucket.s3.us-east-1.amazonaws.com/test_folder//*.tf"
   ]
 }
 ```
@@ -202,9 +202,10 @@ As a part of reading files from remote, you can also query all Terraform configu
     plugin = "terraform"
 
     paths = [
-      "s3.amazonaws.com/bucket/test_folder//*.tf?aws_profile=<AWS_PROFILE>"
-      "s3.amazonaws.com/bucket/test_folder//*.tf?aws_access_key_id=<AWS_ACCESS_KEY>&aws_access_key_secret=<AWS_ACCESS_KEY_SECRET>"
-      "s3.amazonaws.com/bucket/test_folder//*.tf?aws_access_key_id=<AWS_TEMPORARY_ACCESS_KEY>&aws_access_key_secret=<AWS_TEMPORARY_ACCESS_KEY_SECRET>&aws_access_token=<AWS_SESSION_TOKEN>"
+      "s3::https://bucket-2.s3.us-east-1.amazonaws.com//*.tf?aws_profile=<AWS_PROFILE>",
+      "s3::https://bucket-2.s3.us-east-1.amazonaws.com/test_folder//*.tf?aws_profile=<AWS_PROFILE>",
+      "s3::https://bucket-1.s3.us-east-1.amazonaws.com/test_folder//*.tf?aws_access_key_id=<AWS_ACCESS_KEY>&aws_access_key_secret=<AWS_ACCESS_KEY_SECRET>",
+      "s3::https://bucket-3.s3.us-east-1.amazonaws.com/test_folder//*.tf?aws_access_key_id=<AWS_TEMPORARY_ACCESS_KEY>&aws_access_key_secret=<AWS_TEMPORARY_ACCESS_KEY_SECRET>&aws_access_token=<AWS_SESSION_TOKEN>"
     ]
   }
   ```
@@ -254,8 +255,8 @@ As a part of reading files from remote, you can also query all Terraform configu
     plugin = "terraform"
 
     paths = [
-      "s3.amazonaws.com/bucket-1/test_folder//*.tf",
-      "s3.amazonaws.com/bucket-2/test_folder//**/*.tf"
+      "s3::https://bucket-1.s3.us-east-1.amazonaws.com/test_folder//*.tf",
+      "s3::https://bucket-2.s3.us-east-1.amazonaws.com/test_folder//**/*.tf"
     ]
   }
   ```
