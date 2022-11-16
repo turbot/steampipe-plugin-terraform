@@ -6,8 +6,8 @@ import (
 	"os"
 
 	"github.com/Checkmarx/kics/pkg/model"
-	"github.com/turbot/steampipe-plugin-sdk/v4/grpc/proto"
-	"github.com/turbot/steampipe-plugin-sdk/v4/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 )
 
 func tableTerraformLocal(ctx context.Context) *plugin.Table {
@@ -36,6 +36,16 @@ func tableTerraformLocal(ctx context.Context) *plugin.Table {
 				Type:        proto.ColumnType_INT,
 			},
 			{
+				Name:        "end_line",
+				Description: "Ending line number.",
+				Type:        proto.ColumnType_INT,
+			},
+			{
+				Name:        "source",
+				Description: "The block source code.",
+				Type:        proto.ColumnType_STRING,
+			},
+			{
 				Name:        "path",
 				Description: "Path to the file.",
 				Type:        proto.ColumnType_STRING,
@@ -49,6 +59,8 @@ type terraformLocal struct {
 	Value     string
 	Path      string
 	StartLine int
+	EndLine   int
+	Source    string
 }
 
 func listLocals(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
@@ -67,8 +79,6 @@ func listLocals(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData)
 		plugin.Logger(ctx).Error("terraform_local.listLocals", "read_file_error", err, "path", path)
 		return nil, err
 	}
-
-	var tfLocal terraformLocal
 
 	for _, parser := range combinedParser {
 		parsedDocs, err := ParseContent(ctx, d, path, content, parser)
@@ -90,7 +100,7 @@ func listLocals(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData)
 						// Remove all "_kics" arguments now that we have the lines map
 						sanitizeDocument(locals.(model.Document))
 						for localName, localValue := range locals.(model.Document) {
-							tfLocal, err = buildLocal(ctx, path, localName, localValue, linesMap)
+							tfLocal, err := buildLocal(ctx, path, content, localName, localValue, linesMap)
 							if err != nil {
 								plugin.Logger(ctx).Error("terraform_local.listLocals", "build_local_error", err)
 								return nil, err
@@ -106,7 +116,7 @@ func listLocals(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData)
 					// Remove all "_kics" arguments now that we have the lines map
 					sanitizeDocument(doc["locals"].(model.Document))
 					for localName, localValue := range doc["locals"].(model.Document) {
-						tfLocal, err = buildLocal(ctx, path, localName, localValue, linesMap)
+						tfLocal, err := buildLocal(ctx, path, content, localName, localValue, linesMap)
 						if err != nil {
 							plugin.Logger(ctx).Error("terraform_local.listLocals", "build_local_error", err)
 							return nil, err
@@ -116,7 +126,7 @@ func listLocals(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData)
 
 				default:
 					plugin.Logger(ctx).Error("terraform_local.listLocals", "unknown_type", localType)
-					return nil, fmt.Errorf("Failed to list locals in %s due to unknown type", path)
+					return nil, fmt.Errorf("failed to list locals in %s due to unknown type", path)
 				}
 
 			}
@@ -125,22 +135,26 @@ func listLocals(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData)
 	return nil, nil
 }
 
-func buildLocal(ctx context.Context, path string, name string, value interface{}, lineMap map[string]model.LineObject) (terraformLocal, error) {
-	var tfLocal terraformLocal
+func buildLocal(ctx context.Context, path string, content []byte, name string, value interface{}, lineMap map[string]model.LineObject) (*terraformLocal, error) {
+	tfLocal := new(terraformLocal)
 	tfLocal.Path = path
 	tfLocal.Name = name
 
 	valStr, err := convertExpressionValue(value)
 	if err != nil {
 		plugin.Logger(ctx).Error("terraform_local.buildLocal", "convert_value_error", err)
-		return tfLocal, err
+		return nil, err
 	}
 	tfLocal.Value = valStr
 
-	// Each starting line number is stored in "_kics_localName", e.g., "_kics_foo"
-	lineKey := "_kics_" + name
-	defaultLine := lineMap[lineKey]
-	tfLocal.StartLine = defaultLine.Line
+	start, end, source, err := getBlock(ctx, path, content, "locals", []string{})
+	if err != nil {
+		plugin.Logger(ctx).Error("terraform_local.buildLocal", "getBlock", err)
+		return nil, err
+	}
+	tfLocal.StartLine = start.Line
+	tfLocal.EndLine = end.Line
+	tfLocal.Source = source
 
 	return tfLocal, nil
 }

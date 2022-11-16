@@ -1,12 +1,12 @@
 package terraform
 
 import (
-	"github.com/turbot/steampipe-plugin-sdk/v4/plugin"
-	"github.com/turbot/steampipe-plugin-sdk/v4/plugin/schema"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/schema"
 )
 
 type terraformConfig struct {
-	Paths []string `cty:"paths"`
+	Paths []string `cty:"paths" steampipe:"watch"`
 }
 
 var ConfigSchema = map[string]*schema.Attribute{

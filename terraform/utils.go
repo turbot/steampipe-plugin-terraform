@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
@@ -15,8 +14,10 @@ import (
 	"github.com/Checkmarx/kics/pkg/model"
 	"github.com/Checkmarx/kics/pkg/parser"
 	terraformParser "github.com/Checkmarx/kics/pkg/parser/terraform"
-	"github.com/bmatcuk/doublestar"
-	"github.com/turbot/steampipe-plugin-sdk/v4/plugin"
+	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/hclparse"
+	"github.com/hashicorp/hcl/v2/hclsyntax"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
 
@@ -34,13 +35,13 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 	// If the path was requested through qualifier then match it exactly. Globs
 	// are not supported in this context since the output value for the column
 	// will never match the requested value.
-	quals := d.KeyColumnQuals
+	quals := d.EqualsQuals
 	if quals["path"] != nil {
 		d.StreamListItem(ctx, filePath{Path: quals["path"].GetStringValue()})
 		return nil, nil
 	}
 
-	// #2 - Glob paths in config
+	// #2 - paths in config
 
 	// Fail if no paths are specified
 	terraformConfig := GetConfig(d.Connection)
@@ -52,37 +53,13 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 	var matches []string
 	paths := terraformConfig.Paths
 	for _, i := range paths {
-		// Check to resolve ~ to home dir
-		if strings.HasPrefix(i, "~") {
-			// File system context
-			home, err := os.UserHomeDir()
-			if err != nil {
-				plugin.Logger(ctx).Error("utils.tfConfigList", "os.UserHomeDir error. ~ will not be expanded in paths.", err)
-			}
 
-			// Resolve ~ to home dir
-			if home != "" {
-				if i == "~" {
-					i = home
-				} else if strings.HasPrefix(i, "~/") {
-					i = filepath.Join(home, i[2:])
-				}
-			}
-		}
-
-		// Get full path
-		fullPath, err := filepath.Abs(i)
+		// List the files in the given source directory
+		files, err := d.GetSourceFiles(i)
 		if err != nil {
-			plugin.Logger(ctx).Error("utils.tfConfigList", "failed to fetch absolute path", err, "path", i)
 			return nil, err
 		}
-
-		iMatches, err := doublestar.Glob(fullPath)
-		if err != nil {
-			// Fail if any path is an invalid glob
-			return nil, fmt.Errorf("Path is not a valid glob: %s", i)
-		}
-		matches = append(matches, iMatches...)
+		matches = append(matches, files...)
 	}
 
 	// Sanitize the matches to likely Terraform files
@@ -210,4 +187,96 @@ func ParseContent(ctx context.Context, d *plugin.QueryData, path string, content
 	}
 
 	return parsedDocs, nil
+}
+
+func getBlock(ctx context.Context, path string, content []byte, blockType string, matchLabels []string) (startPos hcl.Pos, endPos hcl.Pos, source string, _ error) {
+	parser := hclparse.NewParser()
+	file, _ := parser.ParseHCL(content, path)
+	fileContent, _, diags := file.Body.PartialContent(terraformSchema)
+	if diags.HasErrors() {
+		return hcl.InitialPos, hcl.InitialPos, "", errors.New(diags.Error())
+	}
+	for _, block := range fileContent.Blocks.OfType(blockType) {
+		if isBlockMatch(block, blockType, matchLabels) {
+			syntaxBody, ok := block.Body.(*hclsyntax.Body)
+			if !ok {
+				// this should never happen
+				plugin.Logger(ctx).Info("could not cast to hclsyntax")
+				break
+			}
+
+			startPos = syntaxBody.SrcRange.Start
+			endPos = syntaxBody.SrcRange.End
+			source = strings.Join(
+				strings.Split(
+					string(content),
+					"\n",
+				)[(syntaxBody.SrcRange.Start.Line-1):syntaxBody.SrcRange.End.Line],
+				"\n",
+			)
+
+			break
+		}
+	}
+	return
+}
+
+func isBlockMatch(block *hcl.Block, blockType string, matchLabels []string) bool {
+	if !strings.EqualFold(block.Type, blockType) {
+		return false
+	}
+
+	if len(block.Labels) != len(matchLabels) {
+		return false
+	}
+	for mIdx, matchLabel := range matchLabels {
+		if !strings.EqualFold(block.Labels[mIdx], matchLabel) {
+			return false
+		}
+	}
+	return true
+}
+
+var terraformSchema = &hcl.BodySchema{
+	Blocks: []hcl.BlockHeaderSchema{
+		{
+			Type: "terraform",
+		},
+		{
+			// This one is not really valid, but we include it here so we
+			// can create a specialized error message hinting the user to
+			// nest it inside a "terraform" block.
+			Type: "required_providers",
+		},
+		{
+			Type:       "provider",
+			LabelNames: []string{"name"},
+		},
+		{
+			Type:       "variable",
+			LabelNames: []string{"name"},
+		},
+		{
+			Type: "locals",
+		},
+		{
+			Type:       "output",
+			LabelNames: []string{"name"},
+		},
+		{
+			Type:       "module",
+			LabelNames: []string{"name"},
+		},
+		{
+			Type:       "resource",
+			LabelNames: []string{"type", "name"},
+		},
+		{
+			Type:       "data",
+			LabelNames: []string{"type", "name"},
+		},
+		{
+			Type: "moved",
+		},
+	},
 }

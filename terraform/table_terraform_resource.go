@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/Checkmarx/kics/pkg/model"
-	"github.com/turbot/steampipe-plugin-sdk/v4/grpc/proto"
-	"github.com/turbot/steampipe-plugin-sdk/v4/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 	"github.com/zclconf/go-cty/cty/gocty"
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
@@ -76,6 +76,16 @@ func tableTerraformResource(ctx context.Context) *plugin.Table {
 				Type:        proto.ColumnType_INT,
 			},
 			{
+				Name:        "end_line",
+				Description: "Ending line number.",
+				Type:        proto.ColumnType_INT,
+			},
+			{
+				Name:        "source",
+				Description: "The block source code.",
+				Type:        proto.ColumnType_STRING,
+			},
+			{
 				Name:        "path",
 				Description: "Path to the file.",
 				Type:        proto.ColumnType_STRING,
@@ -89,6 +99,8 @@ type terraformResource struct {
 	Type      string
 	Path      string
 	StartLine int
+	Source    string
+	EndLine   int
 	Arguments map[string]interface{}
 	DependsOn []string
 	// Count can be a number or refer to a local or variable
@@ -117,8 +129,6 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 		return nil, err
 	}
 
-	var tfResource terraformResource
-
 	for _, parser := range combinedParser {
 		parsedDocs, err := ParseContent(ctx, d, path, content, parser)
 		if err != nil {
@@ -132,7 +142,7 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 				for resourceType, resources := range doc["resource"].(model.Document) {
 					// For each resource, scan its arguments
 					for resourceName, resourceData := range resources.(model.Document) {
-						tfResource, err = buildResource(ctx, path, resourceType, resourceName, resourceData.(model.Document))
+						tfResource, err := buildResource(ctx, content, path, resourceType, resourceName, resourceData.(model.Document))
 						if err != nil {
 							plugin.Logger(ctx).Error("terraform_resource.listResources", "build_resource_error", err)
 							return nil, err
@@ -147,8 +157,8 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 	return nil, nil
 }
 
-func buildResource(ctx context.Context, path string, resourceType string, name string, d model.Document) (terraformResource, error) {
-	var tfResource terraformResource
+func buildResource(ctx context.Context, content []byte, path string, resourceType string, name string, d model.Document) (*terraformResource, error) {
+	tfResource := new(terraformResource)
 
 	tfResource.Path = path
 	tfResource.Type = resourceType
@@ -156,14 +166,18 @@ func buildResource(ctx context.Context, path string, resourceType string, name s
 	tfResource.Arguments = make(map[string]interface{})
 	tfResource.Lifecycle = make(map[string]interface{})
 
-	// The starting line number is stored in "_kics__default"
-	kicsLines := d["_kics_lines"]
-	linesMap := kicsLines.(map[string]model.LineObject)
-	defaultLine := linesMap["_kics__default"]
-	tfResource.StartLine = defaultLine.Line
-
 	// Remove all "_kics" arguments
 	sanitizeDocument(d)
+
+	startPosition, endPosition, source, err := getBlock(ctx, path, content, "resource", []string{resourceType, name})
+	if err != nil {
+		plugin.Logger(ctx).Error("error getting details of block", err)
+		return nil, err
+	}
+
+	tfResource.StartLine = startPosition.Line
+	tfResource.Source = source
+	tfResource.EndLine = endPosition.Line
 
 	// TODO: Can we return source code as well?
 	for k, v := range d {

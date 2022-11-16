@@ -7,8 +7,8 @@ import (
 	"reflect"
 
 	"github.com/Checkmarx/kics/pkg/model"
-	"github.com/turbot/steampipe-plugin-sdk/v4/grpc/proto"
-	"github.com/turbot/steampipe-plugin-sdk/v4/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 	"github.com/zclconf/go-cty/cty/gocty"
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
@@ -69,6 +69,16 @@ func tableTerraformDataSource(ctx context.Context) *plugin.Table {
 				Type:        proto.ColumnType_INT,
 			},
 			{
+				Name:        "end_line",
+				Description: "Ending line number.",
+				Type:        proto.ColumnType_INT,
+			},
+			{
+				Name:        "source",
+				Description: "The block source code.",
+				Type:        proto.ColumnType_STRING,
+			},
+			{
 				Name:        "path",
 				Description: "Path to the file.",
 				Type:        proto.ColumnType_STRING,
@@ -82,6 +92,8 @@ type terraformDataSource struct {
 	Type      string
 	Path      string
 	StartLine int
+	EndLine   int
+	Source    string
 	Arguments map[string]interface{}
 	DependsOn []string
 	// Count can be a number or refer to a local or variable
@@ -109,7 +121,7 @@ func listDataSources(ctx context.Context, d *plugin.QueryData, h *plugin.Hydrate
 		return nil, err
 	}
 
-	var tfDataSource terraformDataSource
+	tfDataSource := new(terraformDataSource)
 
 	for _, parser := range combinedParser {
 		parsedDocs, err := ParseContent(ctx, d, path, content, parser)
@@ -126,7 +138,7 @@ func listDataSources(ctx context.Context, d *plugin.QueryData, h *plugin.Hydrate
 					tfDataSource.Type = dataSourceType
 					// For each data source, scan its arguments
 					for dataSourceName, dataSourceData := range dataSources.(model.Document) {
-						tfDataSource, err = buildDataSource(ctx, path, dataSourceType, dataSourceName, dataSourceData.(model.Document))
+						tfDataSource, err = buildDataSource(ctx, path, content, dataSourceType, dataSourceName, dataSourceData.(model.Document))
 						if err != nil {
 							plugin.Logger(ctx).Error("terraform_data_source.listDataSources", "build_data_source_error", err)
 							return nil, err
@@ -141,22 +153,26 @@ func listDataSources(ctx context.Context, d *plugin.QueryData, h *plugin.Hydrate
 	return nil, nil
 }
 
-func buildDataSource(ctx context.Context, path string, dataSourceType string, name string, d model.Document) (terraformDataSource, error) {
-	var tfDataSource terraformDataSource
+func buildDataSource(ctx context.Context, path string, content []byte, dataSourceType string, name string, d model.Document) (*terraformDataSource, error) {
+	var tfDataSource = new(terraformDataSource)
 
 	tfDataSource.Path = path
 	tfDataSource.Type = dataSourceType
 	tfDataSource.Name = name
 	tfDataSource.Arguments = make(map[string]interface{})
 
-	// The starting line number is stored in "_kics__default"
-	kicsLines := d["_kics_lines"]
-	linesMap := kicsLines.(map[string]model.LineObject)
-	defaultLine := linesMap["_kics__default"]
-	tfDataSource.StartLine = defaultLine.Line
-
 	// Remove all "_kics" arguments
 	sanitizeDocument(d)
+
+	startPosition, endPosition, source, err := getBlock(ctx, path, content, "data", []string{dataSourceType, name})
+	if err != nil {
+		plugin.Logger(ctx).Error("error getting details of block", err)
+		return nil, err
+	}
+
+	tfDataSource.StartLine = startPosition.Line
+	tfDataSource.Source = source
+	tfDataSource.EndLine = endPosition.Line
 
 	for k, v := range d {
 		switch k {

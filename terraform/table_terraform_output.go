@@ -7,8 +7,8 @@ import (
 	"reflect"
 
 	"github.com/Checkmarx/kics/pkg/model"
-	"github.com/turbot/steampipe-plugin-sdk/v4/grpc/proto"
-	"github.com/turbot/steampipe-plugin-sdk/v4/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 	"github.com/zclconf/go-cty/cty/gocty"
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
@@ -54,6 +54,16 @@ func tableTerraformOutput(ctx context.Context) *plugin.Table {
 				Type:        proto.ColumnType_INT,
 			},
 			{
+				Name:        "end_line",
+				Description: "Ending line number.",
+				Type:        proto.ColumnType_INT,
+			},
+			{
+				Name:        "source",
+				Description: "The block source code.",
+				Type:        proto.ColumnType_STRING,
+			},
+			{
 				Name:        "path",
 				Description: "Path to the file.",
 				Type:        proto.ColumnType_STRING,
@@ -66,6 +76,8 @@ type terraformOutput struct {
 	Name        string
 	Path        string
 	StartLine   int
+	EndLine     int
+	Source      string
 	DependsOn   []string
 	Description string
 	Sensitive   bool
@@ -104,7 +116,7 @@ func listOutputs(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData
 			if doc["output"] != nil {
 				// For each output, scan its arguments
 				for outputName, outputData := range doc["output"].(model.Document) {
-					tfOutput, err = buildOutput(ctx, path, outputName, outputData.(model.Document))
+					tfOutput, err = buildOutput(ctx, path, content, outputName, outputData.(model.Document))
 					if err != nil {
 						plugin.Logger(ctx).Error("terraform_output.listOutputs", "build_output_error", err)
 						return nil, err
@@ -118,20 +130,23 @@ func listOutputs(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData
 	return nil, nil
 }
 
-func buildOutput(ctx context.Context, path string, name string, d model.Document) (terraformOutput, error) {
+func buildOutput(ctx context.Context, path string, content []byte, name string, d model.Document) (terraformOutput, error) {
 	var tfOutput terraformOutput
 
 	tfOutput.Path = path
 	tfOutput.Name = name
 
-	// The starting line number is stored in "_kics__default"
-	kicsLines := d["_kics_lines"]
-	linesMap := kicsLines.(map[string]model.LineObject)
-	defaultLine := linesMap["_kics__default"]
-	tfOutput.StartLine = defaultLine.Line
-
 	// Remove all "_kics" arguments
 	sanitizeDocument(d)
+
+	start, end, source, err := getBlock(ctx, path, content, "output", []string{name})
+	if err != nil {
+		plugin.Logger(ctx).Error("terraform_output.buildOutput", "getBlock", err)
+		return tfOutput, err
+	}
+	tfOutput.StartLine = start.Line
+	tfOutput.EndLine = end.Line
+	tfOutput.Source = source
 
 	for k, v := range d {
 		switch k {
