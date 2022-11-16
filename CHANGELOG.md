@@ -1,3 +1,18 @@
+## v0.3.0 [2022-11-16]
+
+_What's new?_
+
+- Added support for retrieving Terraform configuration files from remote Git repositories and S3 buckets. For more information, please see [Supported Path Formats](https://hub.steampipe.io/plugins/turbot/terraform#supported-path-formats). ([#25](https://github.com/turbot/steampipe-plugin-terraform/pull/25))
+- Added file watching support for files included in the `paths` config argument. ([#25](https://github.com/turbot/steampipe-plugin-terraform/pull/25))
+
+_Enhancements_
+
+- Added `end_line` and `source` columns to all tables. ([#25](https://github.com/turbot/steampipe-plugin-terraform/pull/25))
+
+_Dependencies_
+
+- Recompiled plugin with [steampipe-plugin-sdk v5.0.0](https://github.com/turbot/steampipe-plugin-sdk/blob/main/CHANGELOG.md#v500-2022-11-16) which includes support for fetching remote files with go-getter and file watching. ([#25](https://github.com/turbot/steampipe-plugin-terraform/pull/25))
+
 ## v0.2.0 [2022-09-09]
 
 _Dependencies_
