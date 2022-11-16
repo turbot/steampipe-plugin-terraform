@@ -60,7 +60,7 @@ func tableTerraformOutput(ctx context.Context) *plugin.Table {
 			},
 			{
 				Name:        "source",
-				Description: "The Block source.",
+				Description: "The block source code.",
 				Type:        proto.ColumnType_STRING,
 			},
 			{
