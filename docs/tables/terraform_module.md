@@ -17,7 +17,7 @@ select
   source,
   version
 from
-  terraform_module
+  terraform_module;
 ```
 
 ### List all modules that reference a source on 'gitlab.com' but don't use a version number as reference
@@ -26,6 +26,9 @@ from
 select
   name,
   split_part(source,'=',-1) as ref
-from terraform_module
-where source like '%gitlab.com%' and not split_part(source,'=',-1) ~ '^[0-9]'
+from
+  terraform_module
+where
+  source like '%gitlab.com%'
+  and not split_part(source,'=',-1) ~ '^[0-9]';
 ```
