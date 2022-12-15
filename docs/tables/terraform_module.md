@@ -3,7 +3,8 @@
 Modules are containers for multiple resources that are used together.
 
 The `source` argument in a module block tells Terraform where to find
-the source code for the desired child module.
+the source code for the desired child module. Due to name clashes, the
+column name for the `source` argument is `module_source`.
 
 Registry modules support versioning via the `version` argument.
 
@@ -14,7 +15,7 @@ Registry modules support versioning via the `version` argument.
 ```sql
 select
   name,
-  source,
+  module_source,
   version
 from
   terraform_module;
@@ -25,10 +26,10 @@ from
 ```sql
 select
   name,
-  split_part(source,'=',-1) as ref
+  split_part(module_source,'=',-1) as ref
 from
   terraform_module
 where
-  source like '%gitlab.com%'
-  and not split_part(source,'=',-1) ~ '^[0-9]';
+  module_source like '%gitlab.com%'
+  and not split_part(module_source,'=',-1) ~ '^[0-9]';
 ```

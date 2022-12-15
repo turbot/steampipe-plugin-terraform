@@ -6,6 +6,9 @@ import (
 	"os"
 	"reflect"
 
+	"github.com/zclconf/go-cty/cty/gocty"
+	ctyjson "github.com/zclconf/go-cty/cty/json"
+
 	"github.com/Checkmarx/kics/pkg/model"
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
@@ -27,7 +30,7 @@ func tableTerraformModule(_ context.Context) *plugin.Table {
 				Type:        proto.ColumnType_STRING,
 			},
 			{
-				Name:        "source",
+				Name:        "module_source",
 				Description: "Module source",
 				Type:        proto.ColumnType_STRING,
 			},
@@ -37,9 +40,44 @@ func tableTerraformModule(_ context.Context) *plugin.Table {
 				Type:        proto.ColumnType_STRING,
 			},
 			{
+				Name:        "count",
+				Description: "The integer value for the count meta-argument if it's set as a number in a literal expression.",
+				Type:        proto.ColumnType_INT,
+			},
+			{
+				Name:        "count_src",
+				Description: "The count meta-argument accepts a whole number, and creates that many instances of the resource or module.",
+				Type:        proto.ColumnType_JSON,
+			},
+			{
+				Name:        "for_each",
+				Description: "The for_each meta-argument accepts a map or a set of strings, and creates an instance for each item in that map or set.",
+				Type:        proto.ColumnType_JSON,
+			},
+			{
+				Name:        "depends_on",
+				Description: "Use the depends_on meta-argument to handle hidden data source or module dependencies that Terraform can't automatically infer.",
+				Type:        proto.ColumnType_JSON,
+			},
+			{
+				Name:        "provider",
+				Description: "The provider meta-argument specifies which provider configuration to use for a data source, overriding Terraform's default behavior of selecting one based on the data source type name.",
+				Type:        proto.ColumnType_STRING,
+			},
+			{
 				Name:        "start_line",
 				Description: "Starting line number.",
 				Type:        proto.ColumnType_INT,
+			},
+			{
+				Name:        "end_line",
+				Description: "Ending line number.",
+				Type:        proto.ColumnType_INT,
+			},
+			{
+				Name:        "source",
+				Description: "The block source code.",
+				Type:        proto.ColumnType_STRING,
 			},
 			{
 				Name:        "path",
@@ -54,8 +92,17 @@ type terraformModule struct {
 	Name      string
 	Path      string
 	StartLine int
+	EndLine   int
 	Source    string
-	Version   string
+	DependsOn []string
+	// Count can be a number or refer to a local or variable
+	Count    int
+	CountSrc string
+	ForEach  string
+	// A data source's provider arg will always reference a provider block
+	Provider     string
+	ModuleSource string
+	Version      string
 }
 
 func listModules(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
@@ -75,7 +122,7 @@ func listModules(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData
 		return nil, err
 	}
 
-	var tfModule terraformModule
+	var tfModule *terraformModule
 
 	for _, parser := range combinedParser {
 		parsedDocs, err := ParseContent(ctx, d, path, content, parser)
@@ -87,7 +134,7 @@ func listModules(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData
 		for _, doc := range parsedDocs.Docs {
 			if doc["module"] != nil {
 				for moduleName, moduleData := range doc["module"].(model.Document) {
-					tfModule, err = buildModule(ctx, path, moduleName, moduleData.(model.Document))
+					tfModule, err = buildModule(ctx, path, content, moduleName, moduleData.(model.Document))
 					if err != nil {
 						plugin.Logger(ctx).Error("terraform_module.listModules", "build_module_error", err)
 						return nil, err
@@ -101,20 +148,24 @@ func listModules(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData
 	return nil, nil
 }
 
-func buildModule(_ context.Context, path string, name string, d model.Document) (terraformModule, error) {
-	var tfModule terraformModule
+func buildModule(ctx context.Context, path string, content []byte, name string, d model.Document) (*terraformModule, error) {
+	tfModule := new(terraformModule)
 
 	tfModule.Path = path
 	tfModule.Name = name
 
-	// The starting line number is stored in "_kics__default"
-	kicsLines := d["_kics_lines"]
-	linesMap := kicsLines.(map[string]model.LineObject)
-	defaultLine := linesMap["_kics__default"]
-	tfModule.StartLine = defaultLine.Line
-
 	// Remove all "_kics" arguments
 	sanitizeDocument(d)
+
+	startPosition, endPosition, source, err := getBlock(ctx, path, content, "module", []string{name})
+	if err != nil {
+		plugin.Logger(ctx).Error("error getting details of block", err)
+		return nil, err
+	}
+
+	tfModule.StartLine = startPosition.Line
+	tfModule.Source = source
+	tfModule.EndLine = endPosition.Line
 
 	for k, v := range d {
 		switch k {
@@ -122,13 +173,57 @@ func buildModule(_ context.Context, path string, name string, d model.Document) 
 			if reflect.TypeOf(v).String() != "string" {
 				return tfModule, fmt.Errorf("The 'source' argument for module '%s' must be of type string", name)
 			}
-			tfModule.Source = v.(string)
+			tfModule.ModuleSource = v.(string)
 
 		case "version":
 			if reflect.TypeOf(v).String() != "string" {
 				return tfModule, fmt.Errorf("The 'version' argument for module '%s' must be of type string", name)
 			}
 			tfModule.Version = v.(string)
+
+		case "count":
+			valStr, err := convertExpressionValue(v)
+			if err != nil {
+				plugin.Logger(ctx).Error("terraform_module.buildDataSource", "convert_count_error", err)
+				return tfModule, err
+			}
+			tfModule.CountSrc = valStr
+
+			// Only attempt to get the int value if the type is SimpleJSONValue
+			if reflect.TypeOf(v).String() == "json.SimpleJSONValue" {
+				var countVal int
+				err := gocty.FromCtyValue(v.(ctyjson.SimpleJSONValue).Value, &countVal)
+				// Log the error but don't return the err since we have count_src anyway
+				if err != nil {
+					plugin.Logger(ctx).Warn("terraform_module.buildResource", "convert_count_error", err)
+				}
+				tfModule.Count = countVal
+			}
+
+		case "provider":
+			if reflect.TypeOf(v).String() != "string" {
+				return tfModule, fmt.Errorf("The 'provider' argument for module '%s' must be of type string", name)
+			}
+			tfModule.Provider = v.(string)
+
+		case "for_each":
+			valStr, err := convertExpressionValue(v)
+			if err != nil {
+				plugin.Logger(ctx).Error("terraform_module.buildDataSource", "convert_for_each_error", err)
+				return tfModule, err
+			}
+			tfModule.ForEach = valStr
+
+		case "depends_on":
+			if reflect.TypeOf(v).String() != "[]interface {}" {
+				return tfModule, fmt.Errorf("The 'depends_on' argument for module '%s' must be of type list", name)
+			}
+			interfaces := v.([]interface{})
+			s := make([]string, len(interfaces))
+			for i, v := range interfaces {
+				s[i] = fmt.Sprint(v)
+			}
+			tfModule.DependsOn = s
 		}
 	}
 	return tfModule, nil
