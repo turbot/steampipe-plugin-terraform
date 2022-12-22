@@ -40,6 +40,11 @@ func tableTerraformModule(_ context.Context) *plugin.Table {
 				Type:        proto.ColumnType_STRING,
 			},
 			{
+				Name:        "variables",
+				Description: "Input variables passed to this module.",
+				Type:        proto.ColumnType_JSON,
+			},
+			{
 				Name:        "count",
 				Description: "The integer value for the count meta-argument if it's set as a number in a literal expression.",
 				Type:        proto.ColumnType_INT,
@@ -94,6 +99,7 @@ type terraformModule struct {
 	StartLine int
 	EndLine   int
 	Source    string
+	Variables map[string]interface{}
 	DependsOn []string
 	// Count can be a number or refer to a local or variable
 	Count    int
@@ -153,6 +159,7 @@ func buildModule(ctx context.Context, path string, content []byte, name string, 
 
 	tfModule.Path = path
 	tfModule.Name = name
+	tfModule.Variables = make(map[string]interface{})
 
 	// Remove all "_kics" arguments
 	sanitizeDocument(d)
@@ -224,6 +231,15 @@ func buildModule(ctx context.Context, path string, content []byte, name string, 
 				s[i] = fmt.Sprint(v)
 			}
 			tfModule.DependsOn = s
+
+		case "lifecycle":
+			// ignoring as lifecycle block is reserved for future versions, see
+			// https://developer.hashicorp.com/terraform/language/modules/syntax#meta-arguments
+
+		default:
+			// safe to add any remaining arguments since already removed all "_kics" arguments
+			tfModule.Variables[k] = v
+
 		}
 	}
 	return tfModule, nil
