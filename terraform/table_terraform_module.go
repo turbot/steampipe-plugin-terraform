@@ -41,7 +41,7 @@ func tableTerraformModule(_ context.Context) *plugin.Table {
 			},
 			{
 				Name:        "arguments",
-				Description: "Input variables passed to this module.",
+				Description: "Input arguments passed to this module.",
 				Type:        proto.ColumnType_JSON,
 			},
 			{
