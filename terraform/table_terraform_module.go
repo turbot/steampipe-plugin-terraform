@@ -40,7 +40,7 @@ func tableTerraformModule(_ context.Context) *plugin.Table {
 				Type:        proto.ColumnType_STRING,
 			},
 			{
-				Name:        "variables",
+				Name:        "arguments",
 				Description: "Input variables passed to this module.",
 				Type:        proto.ColumnType_JSON,
 			},
