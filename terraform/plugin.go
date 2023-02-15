@@ -27,6 +27,7 @@ func Plugin(ctx context.Context) *plugin.Plugin {
 		TableMap: map[string]*plugin.Table{
 			"terraform_data_source": tableTerraformDataSource(ctx),
 			"terraform_local":       tableTerraformLocal(ctx),
+			"terraform_module":      tableTerraformModule(ctx),
 			"terraform_output":      tableTerraformOutput(ctx),
 			"terraform_provider":    tableTerraformProvider(ctx),
 			"terraform_resource":    tableTerraformResource(ctx),
