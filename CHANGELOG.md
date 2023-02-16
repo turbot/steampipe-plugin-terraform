@@ -1,3 +1,10 @@
+## v0.4.0 [2023-02-16]
+
+_What's new?_
+
+- New tables added
+  - [terraform_module](https://hub.steampipe.io/plugins/turbot/terraform/tables/terraform_module) ([#28](https://github.com/turbot/steampipe-plugin-terraform/pull/28)) (Thanks [@rollwagen](https://github.com/rollwagen) for the contribution!!)
+
 ## v0.3.0 [2022-11-16]
 
 _What's new?_
