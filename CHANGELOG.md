@@ -1,3 +1,9 @@
+## v0.5.0 [2023-04-11]
+
+_Dependencies_
+
+- Recompiled plugin with [steampipe-plugin-sdk v5.3.0](https://github.com/turbot/steampipe-plugin-sdk/blob/main/CHANGELOG.md#v530-2023-03-16) which includes fixes for query cache pending item mechanism and aggregator connections not working for dynamic tables. ([#33](https://github.com/turbot/steampipe-plugin-terraform/pull/33))
+
 ## v0.4.0 [2023-02-16]
 
 _What's new?_
