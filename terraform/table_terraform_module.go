@@ -99,7 +99,7 @@ type terraformModule struct {
 	StartLine int
 	EndLine   int
 	Source    string
-	Variables map[string]interface{}
+	Arguments map[string]interface{}
 	DependsOn []string
 	// Count can be a number or refer to a local or variable
 	Count    int
@@ -159,7 +159,7 @@ func buildModule(ctx context.Context, path string, content []byte, name string, 
 
 	tfModule.Path = path
 	tfModule.Name = name
-	tfModule.Variables = make(map[string]interface{})
+	tfModule.Arguments = make(map[string]interface{})
 
 	// Remove all "_kics" arguments
 	sanitizeDocument(d)
@@ -238,7 +238,7 @@ func buildModule(ctx context.Context, path string, content []byte, name string, 
 
 		default:
 			// safe to add any remaining arguments since already removed all "_kics" arguments
-			tfModule.Variables[k] = v
+			tfModule.Arguments[k] = v
 
 		}
 	}
