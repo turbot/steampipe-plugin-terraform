@@ -4,7 +4,7 @@
 
 _Dependencies_
 
-- Recompiled plugin with [steampipe-plugin-sdk v5.4.1](https://github.com/turbot/steampipe-plugin-sdk/blob/main/CHANGELOG.md#v541-2023-05-05) which fixes increased plugin initialization time due to multiple connections causing the schema to be loaded repeatedly. ([#37](https://github.com/turbot/steampipe-plugin-terraform/pull/37))
+- Recompiled plugin with [steampipe-plugin-sdk v5.4.1](https://github.com/turbot/steampipe-plugin-sdk/blob/main/CHANGELOG.md#v541-2023-05-05) which fixes increased plugin initialization time due to multiple connections causing the schema to be loaded repeatedly. ([#38](https://github.com/turbot/steampipe-plugin-terraform/pull/38))
 
 ## v0.5.0 [2023-04-11]
 
