@@ -6,7 +6,7 @@ require (
 	github.com/Checkmarx/kics v1.4.9
 	github.com/hashicorp/hcl/v2 v2.15.0
 	github.com/turbot/go-kit v0.5.0
-	github.com/turbot/steampipe-plugin-sdk/v5 v5.3.0
+	github.com/turbot/steampipe-plugin-sdk/v5 v5.4.1
 	github.com/zclconf/go-cty v1.12.1
 )
 
