@@ -1,3 +1,11 @@
+## v0.6.0 [2023-06-07]
+
+- Fixed the `arguments` column of `terraform_module` table to correctly return data instead of `null`. ([#36](https://github.com/turbot/steampipe-plugin-terraform/pull/36)) (Thanks [@rollwagen](https://github.com/rollwagen) for the contribution!!)
+
+_Dependencies_
+
+Recompiled plugin with [steampipe-plugin-sdk v5.4.1](https://github.com/turbot/steampipe-plugin-sdk/blob/main/CHANGELOG.md#v541-2023-05-05) which fixes increased plugin initialization time due to multiple connections causing the schema to be loaded repeatedly.
+
 ## v0.5.0 [2023-04-11]
 
 _Dependencies_
