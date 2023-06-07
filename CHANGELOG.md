@@ -1,5 +1,7 @@
 ## v0.6.0 [2023-06-07]
 
+_Bug fixes_
+
 - Fixed the `arguments` column of `terraform_module` table to correctly return data instead of `null`. ([#36](https://github.com/turbot/steampipe-plugin-terraform/pull/36)) (Thanks [@rollwagen](https://github.com/rollwagen) for the contribution!!)
 
 _Dependencies_
