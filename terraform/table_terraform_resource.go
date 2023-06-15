@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 
 	"github.com/Checkmarx/kics/pkg/model"
+	p "github.com/Checkmarx/kics/pkg/parser/json"
+
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 	"github.com/zclconf/go-cty/cty/gocty"
@@ -113,42 +116,63 @@ type terraformResource struct {
 }
 
 func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
-	// The path comes from a parent hydate, defaulting to the config paths or
+	// The path comes from a parent hydrate, defaulting to the config paths or
 	// available by the optional key column
 	path := h.Item.(filePath).Path
 
-	combinedParser, err := Parser()
-	if err != nil {
-		plugin.Logger(ctx).Error("terraform_resource.listResources", "create_parser_error", err)
-		return nil, err
-	}
-
+	// Read the content from the file
 	content, err := os.ReadFile(path)
 	if err != nil {
 		plugin.Logger(ctx).Error("terraform_resource.listResources", "read_file_error", err, "path", path)
 		return nil, err
 	}
 
-	for _, parser := range combinedParser {
-		parsedDocs, err := ParseContent(ctx, d, path, content, parser)
+	var docs []model.Document
+
+	// If the file contains the terraform plan in JSON format
+	if filepath.Ext(path) == ".json" || filepath.Ext(path) == ".tfplan.json" {
+		// Initialize the JSON parser
+		jsonParser := p.Parser{}
+
+		// Parse the file content using the JSON parser
+		var str string
+		documents, _, err := jsonParser.Parse(str, content)
 		if err != nil {
 			plugin.Logger(ctx).Error("terraform_resource.listResources", "parse_error", err, "path", path)
 			return nil, fmt.Errorf("failed to parse file %s: %v", path, err)
 		}
+		docs = append(docs, documents...)
+	} else {
+		// Build the terraform parser
+		combinedParser, err := Parser()
+		if err != nil {
+			plugin.Logger(ctx).Error("terraform_resource.listResources", "create_parser_error", err)
+			return nil, err
+		}
 
-		for _, doc := range parsedDocs.Docs {
-			if doc["resource"] != nil {
-				// Resources are grouped by resource type
-				for resourceType, resources := range doc["resource"].(model.Document) {
-					// For each resource, scan its arguments
-					for resourceName, resourceData := range resources.(model.Document) {
-						tfResource, err := buildResource(ctx, content, path, resourceType, resourceName, resourceData.(model.Document))
-						if err != nil {
-							plugin.Logger(ctx).Error("terraform_resource.listResources", "build_resource_error", err)
-							return nil, err
-						}
-						d.StreamListItem(ctx, tfResource)
+		for _, parser := range combinedParser {
+			parsedDocs, err := ParseContent(ctx, d, path, content, parser)
+			if err != nil {
+				plugin.Logger(ctx).Error("terraform_resource.listResources", "parse_error", err, "path", path)
+				return nil, fmt.Errorf("failed to parse file %s: %v", path, err)
+			}
+			docs = append(docs, parsedDocs.Docs...)
+		}
+	}
+
+	// Stream the data
+	for _, doc := range docs {
+		if doc["resource"] != nil {
+			// Resources are grouped by resource type
+			for resourceType, resources := range convertModelDocumentToMapInterface(doc["resource"]) {
+				// For each resource, scan its arguments
+				for resourceName, resourceData := range convertModelDocumentToMapInterface(resources) {
+					tfResource, err := buildResource(ctx, content, path, resourceType, resourceName, convertModelDocumentToMapInterface(resourceData))
+					if err != nil {
+						plugin.Logger(ctx).Error("terraform_resource.listResources", "build_resource_error", err)
+						return nil, err
 					}
+					d.StreamListItem(ctx, tfResource)
 				}
 			}
 		}
@@ -243,4 +267,17 @@ func buildResource(ctx context.Context, content []byte, path string, resourceTyp
 		}
 	}
 	return tfResource, nil
+}
+
+// convertModelDocumentToMapInterface takes the documents in model.Document format and converts it into map[string]interface{}
+func convertModelDocumentToMapInterface(data interface{}) map[string]interface{} {
+	result := map[string]interface{}{}
+
+	switch item := data.(type) {
+	case model.Document:
+		result = item
+	case map[string]interface{}:
+		result = item
+	}
+	return result
 }
