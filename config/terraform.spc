@@ -5,6 +5,7 @@ connection "terraform" {
   # Paths can be configured with a local directory, a remote Git repository URL, or an S3 bucket URL
   # Wildcard based searches are supported, including recursive searches
   # Local paths are resolved relative to the current working directory (CWD)
+  # Apart from Terraform configuration files, the plugin also supports parsing the Terraform plan stored in a JSON file
 
   # For example:
   #  - "*.tf" matches all Terraform configuration files in the CWD
@@ -18,5 +19,5 @@ connection "terraform" {
   # the CWD will be matched, which may cause errors if incompatible file types exist
 
   # Defaults to CWD
-  paths = [ "*.tf" ]
+  paths = [ "*.tf", "*.tfplan.json" ]
 }
