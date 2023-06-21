@@ -166,6 +166,10 @@ For example:
 - `github.com/turbot/steampipe-plugin-aws//**/*.tf?ref=fix_7677` matches all Terraform configuration files in the specific tag of a repository.
 - `github.com/turbot/steampipe-plugin-aws//aws-test/tests/aws_acm_certificate//*.tf` matches all Terraform configuration files in the specified folder path.
 
+For private repositories the format should be as below:
+
+- `git::ssh://git@github.com/test_org/test_repo//*.tf`
+
 You can specify a subdirectory after a double-slash (`//`) if you want to download only a specific subdirectory from a downloaded directory.
 
 ```hcl
@@ -200,7 +204,7 @@ You can also query all Terraform configuration files stored inside an S3 bucket 
 ##### Accessing a Private Bucket
 
 In order to access your files in a private S3 bucket, you will need to configure your credentials. You can use your configured AWS profile from local `~/.aws/config`, or pass the credentials using the standard AWS environment variables, e.g., `AWS_PROFILE`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`.
-  
+
 We recommend using AWS profiles for authentication.
 
 **Note:** Make sure that `region` is configured in the config. If not set in the config, `region` will be fetched from the standard environment variable `AWS_REGION`.
