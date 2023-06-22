@@ -166,7 +166,7 @@ For example:
 - `github.com/turbot/steampipe-plugin-aws//**/*.tf?ref=fix_7677` matches all Terraform configuration files in the specific tag of a repository.
 - `github.com/turbot/steampipe-plugin-aws//aws-test/tests/aws_acm_certificate//*.tf` matches all Terraform configuration files in the specified folder path.
 
-For private repositories the format should be as below:
+If the above specified format does not work please try the below format:
 
 - `git::ssh://git@github.com/test_org/test_repo//*.tf`
 
@@ -242,15 +242,8 @@ If the bucket is in another AWS account, the bucket policy will need to grant ac
       "Principal": {
         "AWS": "arn:aws:iam::123456789012:user/YOUR_USER"
       },
-      "Action": [
-        "s3:ListBucket",
-        "s3:GetObject",
-        "s3:GetObjectVersion"
-      ],
-      "Resource": [
-        "arn:aws:s3:::test-bucket1",
-        "arn:aws:s3:::test-bucket1/*"
-      ]
+      "Action": ["s3:ListBucket", "s3:GetObject", "s3:GetObjectVersion"],
+      "Resource": ["arn:aws:s3:::test-bucket1", "arn:aws:s3:::test-bucket1/*"]
     }
   ]
 }
