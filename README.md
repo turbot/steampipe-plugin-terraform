@@ -6,7 +6,7 @@ Use SQL to query data from Terraform configuration files.
 
 - **[Get started →](https://hub.steampipe.io/plugins/turbot/terraform)**
 - Documentation: [Table definitions & examples](https://hub.steampipe.io/plugins/turbot/terraform/tables)
-- Community: [Slack Channel](https://steampipe.io/community/join)
+- Community: [Join #steampipe on Slack →](https://turbot.com/community/join)
 - Get involved: [Issues](https://github.com/turbot/steampipe-plugin-terraform/issues)
 
 ## Quick start
