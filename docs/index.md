@@ -163,6 +163,10 @@ For example:
 - `github.com/turbot/steampipe-plugin-aws//**/*.tf?ref=fix_7677` matches all Terraform configuration files in the specific tag of a repository.
 - `github.com/turbot/steampipe-plugin-aws//aws-test/tests/aws_acm_certificate//*.tf` matches all Terraform configuration files in the specified folder path.
 
+If the example formats above do not work for private repositories, this could be due to git credentials being stored by another tool, e.g., VS Code. An alternative format you can try is:
+
+- `git::ssh://git@github.com/test_org/test_repo//*.tf`
+
 You can specify a subdirectory after a double-slash (`//`) if you want to download only a specific subdirectory from a downloaded directory.
 
 ```hcl
@@ -292,4 +296,4 @@ connection "terraform" {
 ## Get Involved
 
 - Open source: https://github.com/turbot/steampipe-plugin-terraform
-- Community: [Slack Channel](https://steampipe.io/community/join)
+- Community: [Join #steampipe on Slack →](https://turbot.com/community/join)
