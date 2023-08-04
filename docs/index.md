@@ -16,7 +16,7 @@ A Terraform configuration file is used to declare resources, variables, modules,
 
 [Steampipe](https://steampipe.io) is an open source CLI to instantly query data using SQL.
 
-Apart from reading Terraform configuration files from local path, the plugin also supports scanning files from various sources (e.g., [Local files](#configuring-local-file-paths), [Git](#configuring-remote-git-repository-urls), [S3](#configuring-s3-urls) etc.), as well as the plugin also supports [parsing Terraform plans](#scanning-terraform-plan).
+The plugin supports scanning Terraform configuration files from various sources (e.g., [Local files](#configuring-local-file-paths), [Git](#configuring-remote-git-repository-urls), [S3](#configuring-s3-urls) etc.), and [parsing Terraform plans](#scanning-terraform-plan) as well.
 
 ## Documentation
 
@@ -39,7 +39,7 @@ Installing the latest terraform plugin will create a config file (`~/.steampipe/
 ```hcl
 connection "terraform" {
   plugin = "kubernetes"
-  paths  = ["*.tf", "*.tfplan.json"]
+  paths  = ["*.tf"]
 }
 ```
 
@@ -279,12 +279,13 @@ terraform plan -out=tfplan
 terraform show -json tfplan > tfplan.json
 ```
 
-- And, finally add the path `tfplan.json` to the `paths` argument in the config to read the plan using Steampipe.
+- And, finally add the path `tfplan.json` to the `plan_file_paths` argument in the config to read the plan using Steampipe.
 
 ```hcl
 connection "terraform" {
   plugin = "terraform"
-  paths  = ["/path/to/tfplan.json"]
+
+  plan_file_paths = ["/path/to/tfplan.json"]
 }
 ```
 

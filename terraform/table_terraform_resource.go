@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"reflect"
 	"strings"
 
@@ -118,19 +117,20 @@ type terraformResource struct {
 func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	// The path comes from a parent hydrate, defaulting to the config paths or
 	// available by the optional key column
-	path := h.Item.(filePath).Path
+	pathInfo := h.Item.(filePath)
+	path := pathInfo.Path
 
 	// Read the content from the file
-	content, err := os.ReadFile(path)
+	content, err := os.ReadFile(pathInfo.Path)
 	if err != nil {
-		plugin.Logger(ctx).Error("terraform_resource.listResources", "read_file_error", err, "path", path)
+		plugin.Logger(ctx).Error("terraform_resource.listResources", "read_file_error", err, "path", pathInfo.Path)
 		return nil, err
 	}
 
 	var docs []model.Document
 
-	// If the file contains the terraform plan in JSON format
-	if filepath.Ext(path) == ".json" || filepath.Ext(path) == ".tfplan.json" {
+	// Check if the file contains TF plan
+	if pathInfo.IsTFPlanFilePath {
 		// Initialize the JSON parser
 		jsonParser := p.Parser{}
 

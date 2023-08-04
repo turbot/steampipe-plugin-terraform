@@ -23,7 +23,8 @@ import (
 )
 
 type filePath struct {
-	Path string
+	Path             string
+	IsTFPlanFilePath bool
 }
 
 // Use when parsing any TF file to prevent concurrent map read and write errors
@@ -39,6 +40,14 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 	quals := d.EqualsQuals
 	if quals["path"] != nil {
 		d.StreamListItem(ctx, filePath{Path: quals["path"].GetStringValue()})
+		return nil, nil
+	}
+
+	if quals["plan_file_path"] != nil {
+		d.StreamListItem(ctx, filePath{
+			Path:             quals["plan_file_path"].GetStringValue(),
+			IsTFPlanFilePath: true,
+		})
 		return nil, nil
 	}
 
@@ -71,6 +80,32 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 			continue
 		}
 		d.StreamListItem(ctx, filePath{Path: i})
+	}
+
+	// Gather TF plan file path matches for the glob
+	var matchedPlanFilePaths []string
+	planFilePaths := terraformConfig.PlanFilePaths
+	for _, i := range planFilePaths {
+
+		// List the files in the given source directory
+		files, err := d.GetSourceFiles(i)
+		if err != nil {
+			return nil, err
+		}
+		matchedPlanFilePaths = append(matchedPlanFilePaths, files...)
+	}
+
+	// Sanitize the matches to ignore the directories
+	for _, i := range matchedPlanFilePaths {
+
+		// Ignore directories
+		if filehelpers.DirectoryExists(i) {
+			continue
+		}
+		d.StreamListItem(ctx, filePath{
+			Path:             i,
+			IsTFPlanFilePath: true,
+		})
 	}
 
 	return nil, nil
