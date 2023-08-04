@@ -121,9 +121,9 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 	path := pathInfo.Path
 
 	// Read the content from the file
-	content, err := os.ReadFile(pathInfo.Path)
+	content, err := os.ReadFile(path)
 	if err != nil {
-		plugin.Logger(ctx).Error("terraform_resource.listResources", "read_file_error", err, "path", pathInfo.Path)
+		plugin.Logger(ctx).Error("terraform_resource.listResources", "read_file_error", err, "path", path)
 		return nil, err
 	}
 
