@@ -38,7 +38,7 @@ Installing the latest terraform plugin will create a config file (`~/.steampipe/
 
 ```hcl
 connection "terraform" {
-  plugin = "kubernetes"
+  plugin = "terraform"
   paths  = ["*.tf"]
 }
 ```
