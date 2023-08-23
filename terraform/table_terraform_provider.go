@@ -16,9 +16,8 @@ func tableTerraformProvider(ctx context.Context) *plugin.Table {
 		Name:        "terraform_provider",
 		Description: "Terraform provider information.",
 		List: &plugin.ListConfig{
-			ParentHydrate: tfConfigList,
-			Hydrate:       listProviders,
-			KeyColumns:    plugin.OptionalColumns([]string{"path"}),
+			Hydrate:    listProviders,
+			KeyColumns: plugin.OptionalColumns([]string{"path"}),
 		},
 		Columns: []*plugin.Column{
 			{
@@ -80,7 +79,10 @@ type terraformProvider struct {
 func listProviders(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	// The path comes from a parent hydate, defaulting to the config paths or
 	// available by the optional key column
-	path := h.Item.(filePath).Path
+	paths, err := tfConfigList(ctx, d)
+	if err != nil {
+		return nil, err
+	}
 
 	combinedParser, err := Parser()
 	if err != nil {
@@ -88,59 +90,60 @@ func listProviders(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 		return nil, err
 	}
 
-	content, err := os.ReadFile(path)
-	if err != nil {
-		plugin.Logger(ctx).Error("terraform_provider.listProviders", "read_file_error", err, "path", path)
-		return nil, err
-	}
-
-	var tfProvider terraformProvider
-
-	for _, parser := range combinedParser {
-		parsedDocs, err := ParseContent(ctx, d, path, content, parser)
+	for _, path := range paths {
+		content, err := os.ReadFile(path)
 		if err != nil {
-			plugin.Logger(ctx).Error("terraform_provider.listProviders", "parse_error", err, "path", path)
-			return nil, fmt.Errorf("failed to parse file %s: %v", path, err)
+			plugin.Logger(ctx).Error("terraform_provider.listProviders", "read_file_error", err, "path", path)
+			return nil, err
 		}
 
-		for _, doc := range parsedDocs.Docs {
-			if doc["provider"] != nil {
-				// Providers are grouped by provider name
-				for providerName, providers := range doc["provider"].(model.Document) {
-					// If more than 1 provider with the same name, an array of interfaces is returned
-					switch providerType := providers.(type) {
+		var tfProvider terraformProvider
 
-					case []interface{}:
-						for _, providerData := range providers.([]interface{}) {
+		for _, parser := range combinedParser {
+			parsedDocs, err := ParseContent(ctx, d, path, content, parser)
+			if err != nil {
+				plugin.Logger(ctx).Error("terraform_provider.listProviders", "parse_error", err, "path", path)
+				return nil, fmt.Errorf("failed to parse file %s: %v", path, err)
+			}
+
+			for _, doc := range parsedDocs.Docs {
+				if doc["provider"] != nil {
+					// Providers are grouped by provider name
+					for providerName, providers := range doc["provider"].(model.Document) {
+						// If more than 1 provider with the same name, an array of interfaces is returned
+						switch providerType := providers.(type) {
+
+						case []interface{}:
+							for _, providerData := range providers.([]interface{}) {
+								// For each provider, scan its arguments
+								tfProvider, err = buildProvider(ctx, path, content, providerName, providerData.(model.Document))
+								if err != nil {
+									plugin.Logger(ctx).Error("terraform_provider.listProviders", "build_provider_error", err)
+									return nil, err
+								}
+								d.StreamListItem(ctx, tfProvider)
+							}
+
+							// If only 1 provider has the name, a model.Document is returned
+						case model.Document:
 							// For each provider, scan its arguments
-							tfProvider, err = buildProvider(ctx, path, content, providerName, providerData.(model.Document))
+							tfProvider, err = buildProvider(ctx, path, content, providerName, providers.(model.Document))
 							if err != nil {
 								plugin.Logger(ctx).Error("terraform_provider.listProviders", "build_provider_error", err)
 								return nil, err
 							}
 							d.StreamListItem(ctx, tfProvider)
+
+						default:
+							plugin.Logger(ctx).Error("terraform_provider.listProviders", "unknown_type", providerType)
+							return nil, fmt.Errorf("Failed to list providers due to unknown type for provider %s", providerName)
 						}
 
-						// If only 1 provider has the name, a model.Document is returned
-					case model.Document:
-						// For each provider, scan its arguments
-						tfProvider, err = buildProvider(ctx, path, content, providerName, providers.(model.Document))
-						if err != nil {
-							plugin.Logger(ctx).Error("terraform_provider.listProviders", "build_provider_error", err)
-							return nil, err
-						}
-						d.StreamListItem(ctx, tfProvider)
-
-					default:
-						plugin.Logger(ctx).Error("terraform_provider.listProviders", "unknown_type", providerType)
-						return nil, fmt.Errorf("Failed to list providers due to unknown type for provider %s", providerName)
 					}
-
 				}
 			}
 		}
 	}
-
 	return nil, nil
 }
 

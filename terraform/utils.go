@@ -22,14 +22,10 @@ import (
 	filehelpers "github.com/turbot/go-kit/files"
 )
 
-type filePath struct {
-	Path string
-}
-
 // Use when parsing any TF file to prevent concurrent map read and write errors
 var parseMutex = sync.Mutex{}
 
-func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
+func tfConfigList(ctx context.Context, d *plugin.QueryData) ([]string, error) {
 
 	// #1 - Path via qual
 
@@ -37,9 +33,10 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 	// are not supported in this context since the output value for the column
 	// will never match the requested value.
 	quals := d.EqualsQuals
+	var resolvedPath []string
 	if quals["path"] != nil {
-		d.StreamListItem(ctx, filePath{Path: quals["path"].GetStringValue()})
-		return nil, nil
+		resolvedPath = append(resolvedPath, quals["path"].GetStringValue())
+		return resolvedPath, nil
 	}
 
 	// #2 - paths in config
@@ -70,10 +67,10 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 		if filehelpers.DirectoryExists(i) {
 			continue
 		}
-		d.StreamListItem(ctx, filePath{Path: i})
+		resolvedPath = append(resolvedPath, i)
 	}
 
-	return nil, nil
+	return resolvedPath, nil
 }
 
 func Parser() ([]*parser.Parser, error) {

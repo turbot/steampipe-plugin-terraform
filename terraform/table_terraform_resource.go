@@ -19,9 +19,8 @@ func tableTerraformResource(ctx context.Context) *plugin.Table {
 		Name:        "terraform_resource",
 		Description: "Terraform resource information.",
 		List: &plugin.ListConfig{
-			ParentHydrate: tfConfigList,
-			Hydrate:       listResources,
-			KeyColumns:    plugin.OptionalColumns([]string{"path"}),
+			Hydrate:    listResources,
+			KeyColumns: plugin.OptionalColumns([]string{"path"}),
 		},
 		Columns: []*plugin.Column{
 			{
@@ -113,9 +112,11 @@ type terraformResource struct {
 }
 
 func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
-	// The path comes from a parent hydate, defaulting to the config paths or
-	// available by the optional key column
-	path := h.Item.(filePath).Path
+	// defaulting to the config paths or available by the optional key column
+	paths, err := tfConfigList(ctx, d)
+	if err != nil {
+		return nil, err
+	}
 
 	combinedParser, err := Parser()
 	if err != nil {
@@ -123,37 +124,38 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 		return nil, err
 	}
 
-	content, err := os.ReadFile(path)
-	if err != nil {
-		plugin.Logger(ctx).Error("terraform_resource.listResources", "read_file_error", err, "path", path)
-		return nil, err
-	}
-
-	for _, parser := range combinedParser {
-		parsedDocs, err := ParseContent(ctx, d, path, content, parser)
+	for _, path := range paths {
+		content, err := os.ReadFile(path)
 		if err != nil {
-			plugin.Logger(ctx).Error("terraform_resource.listResources", "parse_error", err, "path", path)
-			return nil, fmt.Errorf("failed to parse file %s: %v", path, err)
+			plugin.Logger(ctx).Error("terraform_resource.listResources", "read_file_error", err, "path", path)
+			return nil, err
 		}
 
-		for _, doc := range parsedDocs.Docs {
-			if doc["resource"] != nil {
-				// Resources are grouped by resource type
-				for resourceType, resources := range doc["resource"].(model.Document) {
-					// For each resource, scan its arguments
-					for resourceName, resourceData := range resources.(model.Document) {
-						tfResource, err := buildResource(ctx, content, path, resourceType, resourceName, resourceData.(model.Document))
-						if err != nil {
-							plugin.Logger(ctx).Error("terraform_resource.listResources", "build_resource_error", err)
-							return nil, err
+		for _, parser := range combinedParser {
+			parsedDocs, err := ParseContent(ctx, d, path, content, parser)
+			if err != nil {
+				plugin.Logger(ctx).Error("terraform_resource.listResources", "parse_error", err, "path", path)
+				return nil, fmt.Errorf("failed to parse file %s: %v", path, err)
+			}
+
+			for _, doc := range parsedDocs.Docs {
+				if doc["resource"] != nil {
+					// Resources are grouped by resource type
+					for resourceType, resources := range doc["resource"].(model.Document) {
+						// For each resource, scan its arguments
+						for resourceName, resourceData := range resources.(model.Document) {
+							tfResource, err := buildResource(ctx, content, path, resourceType, resourceName, resourceData.(model.Document))
+							if err != nil {
+								plugin.Logger(ctx).Error("terraform_resource.listResources", "build_resource_error", err)
+								return nil, err
+							}
+							d.StreamListItem(ctx, tfResource)
 						}
-						d.StreamListItem(ctx, tfResource)
 					}
 				}
 			}
 		}
 	}
-
 	return nil, nil
 }
 

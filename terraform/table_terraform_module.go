@@ -19,9 +19,8 @@ func tableTerraformModule(_ context.Context) *plugin.Table {
 		Name:        "terraform_module",
 		Description: "Terraform module information.",
 		List: &plugin.ListConfig{
-			ParentHydrate: tfConfigList,
-			Hydrate:       listModules,
-			KeyColumns:    plugin.OptionalColumns([]string{"path"}),
+			Hydrate:    listModules,
+			KeyColumns: plugin.OptionalColumns([]string{"path"}),
 		},
 		Columns: []*plugin.Column{
 			{
@@ -114,7 +113,10 @@ type terraformModule struct {
 func listModules(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	// The path comes from a parent hydrate, defaulting to the config paths
 	// or available by the optional key column
-	path := h.Item.(filePath).Path
+	paths, err := tfConfigList(ctx, d)
+	if err != nil {
+		return nil, err
+	}
 
 	combinedParser, err := Parser()
 	if err != nil {
@@ -122,35 +124,36 @@ func listModules(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData
 		return nil, err
 	}
 
-	content, err := os.ReadFile(path)
-	if err != nil {
-		plugin.Logger(ctx).Error("terraform_module.listModules", "read_file_error", err, "path", path)
-		return nil, err
-	}
-
-	var tfModule *terraformModule
-
-	for _, parser := range combinedParser {
-		parsedDocs, err := ParseContent(ctx, d, path, content, parser)
+	for _, path := range paths {
+		content, err := os.ReadFile(path)
 		if err != nil {
-			plugin.Logger(ctx).Error("terraform_module.listModules", "parse_error", err, "path", path)
-			return nil, fmt.Errorf("failed to parse file %s: %v", path, err)
+			plugin.Logger(ctx).Error("terraform_module.listModules", "read_file_error", err, "path", path)
+			return nil, err
 		}
 
-		for _, doc := range parsedDocs.Docs {
-			if doc["module"] != nil {
-				for moduleName, moduleData := range doc["module"].(model.Document) {
-					tfModule, err = buildModule(ctx, path, content, moduleName, moduleData.(model.Document))
-					if err != nil {
-						plugin.Logger(ctx).Error("terraform_module.listModules", "build_module_error", err)
-						return nil, err
+		var tfModule *terraformModule
+
+		for _, parser := range combinedParser {
+			parsedDocs, err := ParseContent(ctx, d, path, content, parser)
+			if err != nil {
+				plugin.Logger(ctx).Error("terraform_module.listModules", "parse_error", err, "path", path)
+				return nil, fmt.Errorf("failed to parse file %s: %v", path, err)
+			}
+
+			for _, doc := range parsedDocs.Docs {
+				if doc["module"] != nil {
+					for moduleName, moduleData := range doc["module"].(model.Document) {
+						tfModule, err = buildModule(ctx, path, content, moduleName, moduleData.(model.Document))
+						if err != nil {
+							plugin.Logger(ctx).Error("terraform_module.listModules", "build_module_error", err)
+							return nil, err
+						}
+						d.StreamListItem(ctx, tfModule)
 					}
-					d.StreamListItem(ctx, tfModule)
 				}
 			}
 		}
 	}
-
 	return nil, nil
 }
 

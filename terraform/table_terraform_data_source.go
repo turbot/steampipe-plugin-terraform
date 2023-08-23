@@ -18,9 +18,8 @@ func tableTerraformDataSource(ctx context.Context) *plugin.Table {
 		Name:        "terraform_data_source",
 		Description: "Terraform data source information.",
 		List: &plugin.ListConfig{
-			ParentHydrate: tfConfigList,
-			Hydrate:       listDataSources,
-			KeyColumns:    plugin.OptionalColumns([]string{"path"}),
+			Hydrate:    listDataSources,
+			KeyColumns: plugin.OptionalColumns([]string{"path"}),
 		},
 		Columns: []*plugin.Column{
 			{
@@ -107,7 +106,10 @@ type terraformDataSource struct {
 func listDataSources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	// The path comes from a parent hydate, defaulting to the config paths or
 	// available by the optional key column
-	path := h.Item.(filePath).Path
+	paths, err := tfConfigList(ctx, d)
+	if err != nil {
+		return nil, err
+	}
 
 	combinedParser, err := Parser()
 	if err != nil {
@@ -115,35 +117,37 @@ func listDataSources(ctx context.Context, d *plugin.QueryData, h *plugin.Hydrate
 		return nil, err
 	}
 
-	content, err := os.ReadFile(path)
-	if err != nil {
-		plugin.Logger(ctx).Error("terraform_data_source.listDataSources", "read_file_error", err, "path", path)
-		return nil, err
-	}
-
-	tfDataSource := new(terraformDataSource)
-
-	for _, parser := range combinedParser {
-		parsedDocs, err := ParseContent(ctx, d, path, content, parser)
+	for _, path := range paths {
+		content, err := os.ReadFile(path)
 		if err != nil {
-			plugin.Logger(ctx).Error("terraform_data_source.listDataSources", "parse_error", err, "path", path)
-			return nil, fmt.Errorf("failed to parse file %s: %v", path, err)
+			plugin.Logger(ctx).Error("terraform_data_source.listDataSources", "read_file_error", err, "path", path)
+			return nil, err
 		}
 
-		for _, doc := range parsedDocs.Docs {
-			if doc["data"] != nil {
-				// Data sources are grouped by data source type
-				for dataSourceType, dataSources := range doc["data"].(model.Document) {
-					tfDataSource.Path = path
-					tfDataSource.Type = dataSourceType
-					// For each data source, scan its arguments
-					for dataSourceName, dataSourceData := range dataSources.(model.Document) {
-						tfDataSource, err = buildDataSource(ctx, path, content, dataSourceType, dataSourceName, dataSourceData.(model.Document))
-						if err != nil {
-							plugin.Logger(ctx).Error("terraform_data_source.listDataSources", "build_data_source_error", err)
-							return nil, err
+		tfDataSource := new(terraformDataSource)
+
+		for _, parser := range combinedParser {
+			parsedDocs, err := ParseContent(ctx, d, path, content, parser)
+			if err != nil {
+				plugin.Logger(ctx).Error("terraform_data_source.listDataSources", "parse_error", err, "path", path)
+				return nil, fmt.Errorf("failed to parse file %s: %v", path, err)
+			}
+
+			for _, doc := range parsedDocs.Docs {
+				if doc["data"] != nil {
+					// Data sources are grouped by data source type
+					for dataSourceType, dataSources := range doc["data"].(model.Document) {
+						tfDataSource.Path = path
+						tfDataSource.Type = dataSourceType
+						// For each data source, scan its arguments
+						for dataSourceName, dataSourceData := range dataSources.(model.Document) {
+							tfDataSource, err = buildDataSource(ctx, path, content, dataSourceType, dataSourceName, dataSourceData.(model.Document))
+							if err != nil {
+								plugin.Logger(ctx).Error("terraform_data_source.listDataSources", "build_data_source_error", err)
+								return nil, err
+							}
+							d.StreamListItem(ctx, tfDataSource)
 						}
-						d.StreamListItem(ctx, tfDataSource)
 					}
 				}
 			}

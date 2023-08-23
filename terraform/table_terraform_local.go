@@ -15,9 +15,8 @@ func tableTerraformLocal(ctx context.Context) *plugin.Table {
 		Name:        "terraform_local",
 		Description: "Terraform local information.",
 		List: &plugin.ListConfig{
-			ParentHydrate: tfConfigList,
-			Hydrate:       listLocals,
-			KeyColumns:    plugin.OptionalColumns([]string{"path"}),
+			Hydrate:    listLocals,
+			KeyColumns: plugin.OptionalColumns([]string{"path"}),
 		},
 		Columns: []*plugin.Column{
 			{
@@ -66,7 +65,10 @@ type terraformLocal struct {
 func listLocals(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	// The path comes from a parent hydate, defaulting to the config paths or
 	// available by the optional key column
-	path := h.Item.(filePath).Path
+	paths, err := tfConfigList(ctx, d)
+	if err != nil {
+		return nil, err
+	}
 
 	combinedParser, err := Parser()
 	if err != nil {
@@ -74,32 +76,49 @@ func listLocals(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData)
 		return nil, err
 	}
 
-	content, err := os.ReadFile(path)
-	if err != nil {
-		plugin.Logger(ctx).Error("terraform_local.listLocals", "read_file_error", err, "path", path)
-		return nil, err
-	}
-
-	for _, parser := range combinedParser {
-		parsedDocs, err := ParseContent(ctx, d, path, content, parser)
+	for _, path := range paths {
+		content, err := os.ReadFile(path)
 		if err != nil {
-			plugin.Logger(ctx).Error("terraform_local.listLocals", "parse_error", err, "path", path)
-			return nil, fmt.Errorf("failed to parse file %s: %v", path, err)
+			plugin.Logger(ctx).Error("terraform_local.listLocals", "read_file_error", err, "path", path)
+			return nil, err
 		}
 
-		for _, doc := range parsedDocs.Docs {
-			if doc["locals"] != nil {
-				// Locals are grouped by local blocks
-				switch localType := doc["locals"].(type) {
+		for _, parser := range combinedParser {
+			parsedDocs, err := ParseContent(ctx, d, path, content, parser)
+			if err != nil {
+				plugin.Logger(ctx).Error("terraform_local.listLocals", "parse_error", err, "path", path)
+				return nil, fmt.Errorf("failed to parse file %s: %v", path, err)
+			}
 
-				// If more than 1 local block is defined, an array of interfaces is returned
-				case []interface{}:
-					for _, locals := range doc["locals"].([]interface{}) {
+			for _, doc := range parsedDocs.Docs {
+				if doc["locals"] != nil {
+					// Locals are grouped by local blocks
+					switch localType := doc["locals"].(type) {
+
+					// If more than 1 local block is defined, an array of interfaces is returned
+					case []interface{}:
+						for _, locals := range doc["locals"].([]interface{}) {
+							// Get lines map to use when building each local row
+							linesMap := locals.(model.Document)["_kics_lines"].(map[string]model.LineObject)
+							// Remove all "_kics" arguments now that we have the lines map
+							sanitizeDocument(locals.(model.Document))
+							for localName, localValue := range locals.(model.Document) {
+								tfLocal, err := buildLocal(ctx, path, content, localName, localValue, linesMap)
+								if err != nil {
+									plugin.Logger(ctx).Error("terraform_local.listLocals", "build_local_error", err)
+									return nil, err
+								}
+								d.StreamListItem(ctx, tfLocal)
+							}
+						}
+
+					// If only 1 local block is defined, a model.Document is returned
+					case model.Document:
 						// Get lines map to use when building each local row
-						linesMap := locals.(model.Document)["_kics_lines"].(map[string]model.LineObject)
+						linesMap := doc["locals"].(model.Document)["_kics_lines"].(map[string]model.LineObject)
 						// Remove all "_kics" arguments now that we have the lines map
-						sanitizeDocument(locals.(model.Document))
-						for localName, localValue := range locals.(model.Document) {
+						sanitizeDocument(doc["locals"].(model.Document))
+						for localName, localValue := range doc["locals"].(model.Document) {
 							tfLocal, err := buildLocal(ctx, path, content, localName, localValue, linesMap)
 							if err != nil {
 								plugin.Logger(ctx).Error("terraform_local.listLocals", "build_local_error", err)
@@ -107,31 +126,17 @@ func listLocals(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData)
 							}
 							d.StreamListItem(ctx, tfLocal)
 						}
+
+					default:
+						plugin.Logger(ctx).Error("terraform_local.listLocals", "unknown_type", localType)
+						return nil, fmt.Errorf("failed to list locals in %s due to unknown type", path)
 					}
 
-				// If only 1 local block is defined, a model.Document is returned
-				case model.Document:
-					// Get lines map to use when building each local row
-					linesMap := doc["locals"].(model.Document)["_kics_lines"].(map[string]model.LineObject)
-					// Remove all "_kics" arguments now that we have the lines map
-					sanitizeDocument(doc["locals"].(model.Document))
-					for localName, localValue := range doc["locals"].(model.Document) {
-						tfLocal, err := buildLocal(ctx, path, content, localName, localValue, linesMap)
-						if err != nil {
-							plugin.Logger(ctx).Error("terraform_local.listLocals", "build_local_error", err)
-							return nil, err
-						}
-						d.StreamListItem(ctx, tfLocal)
-					}
-
-				default:
-					plugin.Logger(ctx).Error("terraform_local.listLocals", "unknown_type", localType)
-					return nil, fmt.Errorf("failed to list locals in %s due to unknown type", path)
 				}
-
 			}
 		}
 	}
+
 	return nil, nil
 }
 
