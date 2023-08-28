@@ -66,7 +66,20 @@ type terraformLocal struct {
 func listLocals(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	// The path comes from a parent hydate, defaulting to the config paths or
 	// available by the optional key column
-	path := h.Item.(filePath).Path
+	data := h.Item.(filePath)
+	path := data.Path
+
+	// Return if the path is a TF plan path
+	if data.IsTFPlanFilePath {
+		return nil, nil
+	}
+
+	// If the path was requested through qualifier then match it exactly. Globs
+	// are not supported in this context since the output value for the column
+	// will never match the requested value.
+	if d.EqualsQualString("path") != "" && d.EqualsQualString("path") != path {
+		return nil, nil
+	}
 
 	combinedParser, err := Parser()
 	if err != nil {

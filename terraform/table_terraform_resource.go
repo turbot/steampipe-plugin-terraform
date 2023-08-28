@@ -120,6 +120,13 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 	pathInfo := h.Item.(filePath)
 	path := pathInfo.Path
 
+	// If the path was requested through qualifier then match it exactly. Globs
+	// are not supported in this context since the output value for the column
+	// will never match the requested value.
+	if d.EqualsQualString("path") != "" && d.EqualsQualString("path") != path {
+		return nil, nil
+	}
+
 	// Read the content from the file
 	content, err := os.ReadFile(path)
 	if err != nil {
