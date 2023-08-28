@@ -7,11 +7,16 @@ import (
 
 type terraformConfig struct {
 	ConfigurationFilePaths []string `cty:"configuration_file_paths" steampipe:"watch"`
+	Paths                  []string `cty:"paths" steampipe:"watch"`
 	PlanFilePaths          []string `cty:"plan_file_paths" steampipe:"watch"`
 }
 
 var ConfigSchema = map[string]*schema.Attribute{
 	"configuration_file_paths": {
+		Type: schema.TypeList,
+		Elem: &schema.Attribute{Type: schema.TypeString},
+	},
+	"paths": {
 		Type: schema.TypeList,
 		Elem: &schema.Attribute{Type: schema.TypeString},
 	},

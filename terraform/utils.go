@@ -34,13 +34,25 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 
 	// Fail if no paths are specified
 	terraformConfig := GetConfig(d.Connection)
-	if terraformConfig.ConfigurationFilePaths == nil {
-		return nil, errors.New("configuration_file_path must be configured")
-	}
+
+	// Should we still consider this as a required argument ??
+	// Since the plugin now supports parsing TF plan as well. What will happen if the config has only plan_file_paths defined? Should we return error ??
+
+	// if terraformConfig.ConfigurationFilePaths == nil {
+	// 	return nil, errors.New("configuration_file_path must be configured")
+	// }
 
 	// Gather file path matches for the glob
-	var matches []string
-	configurationFilePaths := terraformConfig.ConfigurationFilePaths
+	var paths, matches []string
+
+	// TODO:: Remove backward compatibility for the argument 'Paths'
+	if terraformConfig.Paths != nil {
+		paths = terraformConfig.Paths
+	} else {
+		paths = terraformConfig.ConfigurationFilePaths
+	}
+	configurationFilePaths := paths
+
 	for _, i := range configurationFilePaths {
 
 		// List the files in the given source directory
