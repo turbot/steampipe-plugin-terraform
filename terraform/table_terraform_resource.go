@@ -141,8 +141,8 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 
 	var docs []model.Document
 
-	// Check if the file contains TF plan
-	if pathInfo.IsTFPlanFilePath {
+	// Check if the file contains TF plan or state
+	if pathInfo.IsTFPlanFilePath || pathInfo.IsTFStateFilePath {
 		// Initialize the JSON parser
 		jsonParser := p.Parser{}
 
@@ -150,22 +150,9 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 		var str string
 		documents, _, err := jsonParser.Parse(str, content)
 		if err != nil {
-			plugin.Logger(ctx).Error("terraform_resource.listResources", "plan_parse_error", err, "path", path)
-			return nil, fmt.Errorf("failed to parse plan file %s: %v", path, err)
+			plugin.Logger(ctx).Error("terraform_resource.listResources", "parse_error", err, "path", path)
+			return nil, fmt.Errorf("failed to parse plan or state file %s: %v", path, err)
 		}
-		docs = append(docs, documents...)
-	} else if pathInfo.IsTFStateFilePath { // Check if the file contains TF state
-		// Initialize the JSON parser
-		jsonParser := p.Parser{}
-
-		// Parse the file content using the JSON parser
-		var str string
-		documents, _, err := jsonParser.Parse(str, content)
-		if err != nil {
-			plugin.Logger(ctx).Error("terraform_resource.listResources", "state_parse_error", err, "path", path)
-			return nil, fmt.Errorf("failed to parse state file %s: %v", path, err)
-		}
-
 		docs = append(docs, documents...)
 	} else {
 		// Build the terraform parser
@@ -200,8 +187,7 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 					d.StreamListItem(ctx, tfResource)
 				}
 			}
-		} else if doc["resources"] != nil {
-			// Resources are grouped by resource type
+		} else if doc["resources"] != nil { // state file returns resources
 			for _, resource := range doc["resources"].([]interface{}) {
 				resourceData := convertModelDocumentToMapInterface(resource)
 				tfResource, err := buildResource(ctx, pathInfo.IsTFStateFilePath, content, path, resourceData["type"].(string), resourceData["name"].(string), resourceData)
@@ -233,7 +219,7 @@ func buildResource(ctx context.Context, isTFStateFilePath bool, content []byte, 
 	if isTFStateFilePath {
 		file, err := os.Open(path)
 		if err != nil {
-			plugin.Logger(ctx).Error("terraform_resource.lisbuildResourcetOutputs", "open_file_error", err, "path", path)
+			plugin.Logger(ctx).Error("terraform_resource.buildResource", "open_file_error", err, "path", path)
 			return tfResource, err
 		}
 		startLine, endLine := findBlockLinesFromJSON(file, "resources", resourceType, name)
