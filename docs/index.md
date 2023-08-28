@@ -314,7 +314,7 @@ terraform apply
 connection "terraform" {
   plugin = "terraform"
 
-  state_file_paths = ["terraform.tfstate", "*.tfstate"]
+  state_file_paths = ["terraform.tfstate"]
 }
 ```
 

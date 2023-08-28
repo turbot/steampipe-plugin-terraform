@@ -358,7 +358,7 @@ func isTerraformPlan(content []byte) bool {
 
 // findBlockLinesFromJSON locates the start and end lines of a specific block or nested element within a block.
 // The file should contain structured data (e.g., JSON) and this function expects to search for blocks with specific names.
-func findBlockLinesFromJSON(file *os.File, blockName string, pathName ...string) (int, int) {
+func findBlockLinesFromJSON(file *os.File, blockName string, pathName ...string) (int, int, string) {
 	var currentLine, startLine, endLine int
 	var bracketCounter int
 
@@ -435,13 +435,31 @@ func findBlockLinesFromJSON(file *os.File, blockName string, pathName ...string)
 			break
 		}
 	}
+	source := getSourceFromFile(file, startLine, endLine)
 
 	if startLine != 0 && endLine == 0 {
 		// If we found the start but not the end, reset the start to indicate the block doesn't exist in entirety.
 		startLine = 0
 	}
 
-	return startLine, endLine
+	return startLine, endLine, source
+}
+
+func getSourceFromFile(file *os.File, startLine int, endLine int) string {
+	var source string
+	_, _ = file.Seek(0, 0) // Go to the start
+	scanner := bufio.NewScanner(file)
+	currentSourceLine := 0
+	for scanner.Scan() {
+		currentSourceLine++
+		if currentSourceLine >= startLine && currentSourceLine <= endLine {
+			source += scanner.Text() + "\n"
+		}
+		if currentSourceLine > endLine {
+			break
+		}
+	}
+	return source
 }
 
 func readLineN(file *os.File, lineNum int) (string, error) {

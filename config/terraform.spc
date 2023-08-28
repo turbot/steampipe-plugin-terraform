@@ -22,5 +22,5 @@ connection "terraform" {
   # Defaults to CWD
   configuration_file_paths = ["*.tf"]
   plan_file_paths          = ["tfplan.json", "*.tfplan.json"]
-  state_file_paths         = ["terraform.tfstate", "*.tfstate"]
+  state_file_paths         = ["*.tfstate"]
 }

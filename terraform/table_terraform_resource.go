@@ -222,9 +222,10 @@ func buildResource(ctx context.Context, isTFStateFilePath bool, content []byte, 
 			plugin.Logger(ctx).Error("terraform_resource.buildResource", "open_file_error", err, "path", path)
 			return tfResource, err
 		}
-		startLine, endLine := findBlockLinesFromJSON(file, "resources", resourceType, name)
+		startLine, endLine, source := findBlockLinesFromJSON(file, "resources", resourceType, name)
 		tfResource.StartLine = startLine
 		tfResource.EndLine = endLine
+		tfResource.Source = source
 	} else {
 		startPosition, endPosition, source, err := getBlock(ctx, path, content, "resource", []string{resourceType, name})
 		if err != nil {
