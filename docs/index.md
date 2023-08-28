@@ -39,7 +39,8 @@ Installing the latest terraform plugin will create a config file (`~/.steampipe/
 ```hcl
 connection "terraform" {
   plugin = "terraform"
-  paths  = ["*.tf"]
+
+  configuration_file_paths = ["*.tf"]
 }
 ```
 
@@ -104,7 +105,7 @@ The plugin requires a list of locations to search for the Terraform configuratio
 connection "terraform" {
   plugin = "terraform"
 
-  paths = [
+  configuration_file_paths = [
     "terraform_test.tf",
     "github.com/turbot/steampipe-plugin-aws//aws-test/tests/aws_acm_certificate//variables.tf"
   ]
@@ -117,7 +118,7 @@ Paths may [include wildcards](https://pkg.go.dev/path/filepath#Match) and suppor
 connection "terraform" {
   plugin = "terraform"
 
-  paths = [
+  configuration_file_paths = [
     "*.tf",
     "~/*.tf",
     "github.com/turbot/steampipe-plugin-aws//aws-test/tests/aws_acm_certificate//*.tf",
@@ -148,7 +149,7 @@ You can define a list of local directory paths to search for terraform files. Pa
 connection "terraform" {
   plugin = "terraform"
 
-  paths = [ "*.tf", "~/*.tf", "/path/to/dir/main.tf" ]
+  configuration_file_paths = [ "*.tf", "~/*.tf", "/path/to/dir/main.tf" ]
 }
 ```
 
@@ -173,7 +174,7 @@ You can specify a subdirectory after a double-slash (`//`) if you want to downlo
 connection "terraform" {
   plugin = "terraform"
 
-  paths = [ "github.com/turbot/steampipe-plugin-aws//aws-test/tests/aws_acm_certificate//*.tf" ]
+  configuration_file_paths = [ "github.com/turbot/steampipe-plugin-aws//aws-test/tests/aws_acm_certificate//*.tf" ]
 }
 ```
 
@@ -183,7 +184,7 @@ Similarly, you can define a list of GitLab and BitBucket URLs to search for Terr
 connection "terraform" {
   plugin = "terraform"
 
-  paths = [
+  configuration_file_paths = [
     "github.com/turbot/steampipe-plugin-aws//**/*.tf",
     "github.com/hashicorp/terraform-guides//infrastructure-as-code//**/*.tf",
     "bitbucket.org/benturrell/terraform-arcgis-portal//modules/shared//*.tf",
@@ -212,7 +213,7 @@ You can also authenticate your request by setting the AWS profile and region in 
 connection "terraform" {
   plugin = "terraform"
 
-  paths = [
+  configuration_file_paths = [
     "s3::https://bucket-2.s3.us-east-1.amazonaws.com//*.tf?aws_profile=<AWS_PROFILE>",
     "s3::https://bucket-2.s3.us-east-1.amazonaws.com/test_folder//*.tf?aws_profile=<AWS_PROFILE>"
   ]
@@ -256,7 +257,7 @@ You can query any public S3 bucket directly using the URL without passing creden
 connection "terraform" {
   plugin = "terraform"
 
-  paths = [
+  configuration_file_paths = [
     "s3::https://bucket-1.s3.us-east-1.amazonaws.com/test_folder//*.tf",
     "s3::https://bucket-2.s3.us-east-1.amazonaws.com/test_folder//**/*.tf"
   ]

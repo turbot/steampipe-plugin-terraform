@@ -41,8 +41,25 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 	// are not supported in this context since the output value for the column
 	// will never match the requested value.
 	quals := d.EqualsQuals
-	if d.EqualsQualString("path") != "" {
-		d.StreamListItem(ctx, filePath{Path: quals["path"].GetStringValue()})
+	if quals["path"] != nil {
+
+		path := d.EqualsQualString("path")
+
+		// check if state file is provide in the qual
+		if strings.HasSuffix(path, ".tfstate") {
+			d.StreamListItem(ctx, filePath{Path: quals["path"].GetStringValue(), IsTFStateFilePath: true})
+			return nil, nil
+		}
+
+		fileContent, err := os.ReadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("error reading file: %v", err)
+		}
+
+		// If the path is provided using the qual, determine the file type from its content
+		isTerraformPlan := isTerraformPlan(fileContent)
+
+		d.StreamListItem(ctx, filePath{Path: quals["path"].GetStringValue(), IsTFPlanFilePath: isTerraformPlan})
 		return nil, nil
 	}
 
@@ -50,14 +67,22 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 
 	// Fail if no paths are specified
 	terraformConfig := GetConfig(d.Connection)
-	if terraformConfig.Paths == nil && terraformConfig.PlanFilePaths == nil && terraformConfig.StateFilePaths == nil {
-		return nil, errors.New("paths or plan_file_paths or state_file_paths must be configured")
+	if terraformConfig.Paths == nil && terraformConfig.ConfigurationFilePaths == nil && terraformConfig.PlanFilePaths == nil && terraformConfig.StateFilePaths == nil {
+		return nil, errors.New("configuration_file_paths or plan_file_paths or state_file_paths must be configured")
 	}
 
 	// Gather file path matches for the glob
-	var matches []string
-	paths := terraformConfig.Paths
-	for _, i := range paths {
+	var paths, matches []string
+
+	// TODO:: Remove backward compatibility for the argument 'Paths'
+	if terraformConfig.Paths != nil {
+		paths = terraformConfig.Paths
+	} else {
+		paths = terraformConfig.ConfigurationFilePaths
+	}
+	configurationFilePaths := paths
+
+	for _, i := range configurationFilePaths {
 
 		// List the files in the given source directory
 		files, err := d.GetSourceFiles(i)
@@ -315,6 +340,20 @@ var terraformSchema = &hcl.BodySchema{
 			Type: "moved",
 		},
 	},
+}
+
+func isTerraformPlan(content []byte) bool {
+	var data map[string]interface{}
+	err := json.Unmarshal(content, &data)
+	if err != nil {
+		return false
+	}
+
+	// Check for fields that are common in Terraform plans
+	_, hasResourceChanges := data["resource_changes"]
+	_, hasFormatVersion := data["format_version"]
+
+	return hasResourceChanges && hasFormatVersion
 }
 
 // findBlockLinesFromJSON locates the start and end lines of a specific block or nested element within a block.

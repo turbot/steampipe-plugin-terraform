@@ -107,7 +107,13 @@ type terraformDataSource struct {
 func listDataSources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	// The path comes from a parent hydate, defaulting to the config paths or
 	// available by the optional key column
-	path := h.Item.(filePath).Path
+	data := h.Item.(filePath)
+	path := data.Path
+
+	// Return if the path is a TF plan path
+	if data.IsTFPlanFilePath {
+		return nil, nil
+	}
 
 	combinedParser, err := Parser()
 	if err != nil {
