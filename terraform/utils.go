@@ -1,11 +1,13 @@
 package terraform
 
 import (
+	"bufio"
 	"context"
 	_ "embed" // Embed kics CLI img and scan-flags
 	json "encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"reflect"
 	"strings"
 	"sync"
@@ -23,8 +25,9 @@ import (
 )
 
 type filePath struct {
-	Path             string
-	IsTFPlanFilePath bool
+	Path              string
+	IsTFPlanFilePath  bool
+	IsTFStateFilePath bool
 }
 
 // Use when parsing any TF file to prevent concurrent map read and write errors
@@ -38,16 +41,8 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 	// are not supported in this context since the output value for the column
 	// will never match the requested value.
 	quals := d.EqualsQuals
-	if quals["path"] != nil {
+	if d.EqualsQualString("path") != "" {
 		d.StreamListItem(ctx, filePath{Path: quals["path"].GetStringValue()})
-		return nil, nil
-	}
-
-	if quals["plan_file_path"] != nil {
-		d.StreamListItem(ctx, filePath{
-			Path:             quals["plan_file_path"].GetStringValue(),
-			IsTFPlanFilePath: true,
-		})
 		return nil, nil
 	}
 
@@ -55,8 +50,8 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 
 	// Fail if no paths are specified
 	terraformConfig := GetConfig(d.Connection)
-	if terraformConfig.Paths == nil {
-		return nil, errors.New("paths must be configured")
+	if terraformConfig.Paths == nil && terraformConfig.PlanFilePaths == nil && terraformConfig.StateFilePaths == nil {
+		return nil, errors.New("paths or plan_file_paths or state_file_paths must be configured")
 	}
 
 	// Gather file path matches for the glob
@@ -108,6 +103,31 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 		})
 	}
 
+	// Gather TF state file path matches for the glob
+	var matchedStateFilePaths []string
+	stateFilePaths := terraformConfig.StateFilePaths
+	for _, i := range stateFilePaths {
+
+		// List the files in the given source directory
+		files, err := d.GetSourceFiles(i)
+		if err != nil {
+			return nil, err
+		}
+		matchedStateFilePaths = append(matchedStateFilePaths, files...)
+	}
+
+	// Sanitize the matches to ignore the directories
+	for _, i := range matchedStateFilePaths {
+
+		// Ignore directories
+		if filehelpers.DirectoryExists(i) {
+			continue
+		}
+		d.StreamListItem(ctx, filePath{
+			Path:              i,
+			IsTFStateFilePath: true,
+		})
+	}
 	return nil, nil
 }
 
@@ -295,4 +315,105 @@ var terraformSchema = &hcl.BodySchema{
 			Type: "moved",
 		},
 	},
+}
+
+// findBlockLinesFromJSON locates the start and end lines of a specific block or nested element within a block.
+// The file should contain structured data (e.g., JSON) and this function expects to search for blocks with specific names.
+func findBlockLinesFromJSON(file *os.File, blockName string, pathName ...string) (int, int) {
+	var currentLine, startLine, endLine int
+	var bracketCounter int
+
+	// These boolean flags indicate which part of the structured data we're currently processing.
+	inBlock, inOutput, inTargetBlock := false, false, false
+
+	// Move the file pointer to the start of the file.
+	_, _ = file.Seek(0, 0)
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		currentLine++
+		line := scanner.Text()
+		trimmedLine := strings.TrimSpace(line)
+
+		// Detect the start of the desired block, path, response, etc.
+		// Depending on the blockName and provided pathName, different conditions are checked.
+
+		// Generic block detection
+		if !inBlock && (trimmedLine == fmt.Sprintf(`"%s": {`, blockName) || trimmedLine == fmt.Sprintf(`"%s": [`, blockName)) {
+			inBlock = true
+			startLine = currentLine
+			continue
+		} else if inBlock && blockName == "outputs" && trimmedLine == fmt.Sprintf(`"%s": {`, pathName[0]) {
+			// Different output block detection within the "outputs" block
+			inOutput = true
+			bracketCounter = 1
+			startLine = currentLine
+			continue
+		} else if inBlock && blockName == "resources" {
+			if inBlock && strings.Contains(trimmedLine, "{") {
+				bracketCounter++
+			}
+			if inBlock && strings.Contains(trimmedLine, "}") {
+				bracketCounter--
+			}
+
+			if inBlock && bracketCounter == 1 && strings.Contains(trimmedLine, fmt.Sprintf(`"type": "%s"`, pathName[0])) {
+				peekCounter := 1
+				nameFound := false
+
+				for {
+					peekLine, _ := readLineN(file, currentLine+peekCounter)
+					if strings.Contains(peekLine, fmt.Sprintf(`"name": "%s"`, pathName[1])) {
+						nameFound = true
+						break
+					}
+					if strings.Contains(peekLine, "}") {
+						break
+					}
+					peekCounter++
+				}
+
+				if nameFound {
+					inTargetBlock = true
+					startLine = currentLine - bracketCounter - 1 // Assume the opening brace is at the start of this resource
+				}
+			}
+		}
+		// If we are within a block, we need to track the opening and closing brackets
+		// to determine where the block ends.
+		if inBlock && inOutput && !inTargetBlock {
+			bracketCounter += strings.Count(line, "{")
+			bracketCounter -= strings.Count(line, "}")
+
+			if bracketCounter == 0 {
+				endLine = currentLine
+				break
+			}
+		}
+
+		if inBlock && inTargetBlock && bracketCounter == 0 {
+			endLine = currentLine
+			break
+		}
+	}
+
+	if startLine != 0 && endLine == 0 {
+		// If we found the start but not the end, reset the start to indicate the block doesn't exist in entirety.
+		startLine = 0
+	}
+
+	return startLine, endLine
+}
+
+func readLineN(file *os.File, lineNum int) (string, error) {
+	_, _ = file.Seek(0, 0) // Go to the start
+	scanner := bufio.NewScanner(file)
+	currentLine := 0
+	for scanner.Scan() {
+		currentLine++
+		if currentLine == lineNum {
+			return scanner.Text(), nil
+		}
+	}
+	return "", nil
 }
