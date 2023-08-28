@@ -6,6 +6,7 @@ import (
 	json "encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"reflect"
 	"strings"
 	"sync"
@@ -31,6 +32,30 @@ type filePath struct {
 var parseMutex = sync.Mutex{}
 
 func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
+
+	// #1 - Path via qual
+
+	// If the path was requested through qualifier then match it exactly. Globs
+	// are not supported in this context since the output value for the column
+	// will never match the requested value.
+	quals := d.EqualsQuals
+	if quals["path"] != nil {
+
+		path := d.EqualsQualString("path")
+
+		fileContent, err := os.ReadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("error reading file: %v", err)
+		}
+
+		// If the path is provided using the qual, determine the file type from its content
+		isTerraformPlan := isTerraformPlan(fileContent)
+
+		d.StreamListItem(ctx, filePath{Path: quals["path"].GetStringValue(), IsTFPlanFilePath: isTerraformPlan})
+		return nil, nil
+	}
+
+	// #2 - paths in config
 
 	// Fail if no paths are specified
 	terraformConfig := GetConfig(d.Connection)
@@ -286,4 +311,18 @@ var terraformSchema = &hcl.BodySchema{
 			Type: "moved",
 		},
 	},
+}
+
+func isTerraformPlan(content []byte) bool {
+	var data map[string]interface{}
+	err := json.Unmarshal(content, &data)
+	if err != nil {
+		return false
+	}
+
+	// Check for fields that are common in Terraform plans
+	_, hasResourceChanges := data["resource_changes"]
+	_, hasFormatVersion := data["format_version"]
+
+	return hasResourceChanges && hasFormatVersion
 }

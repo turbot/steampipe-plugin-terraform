@@ -122,13 +122,6 @@ func listModules(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData
 		return nil, nil
 	}
 
-	// If the path was requested through qualifier then match it exactly. Globs
-	// are not supported in this context since the output value for the column
-	// will never match the requested value.
-	if d.EqualsQualString("path") != "" && d.EqualsQualString("path") != path {
-		return nil, nil
-	}
-
 	combinedParser, err := Parser()
 	if err != nil {
 		plugin.Logger(ctx).Error("terraform_module.listModules", "create_parser_error", err)
