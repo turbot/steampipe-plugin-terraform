@@ -1,6 +1,7 @@
 package terraform
 
 import (
+	"bufio"
 	"context"
 	_ "embed" // Embed kics CLI img and scan-flags
 	json "encoding/json"
@@ -325,4 +326,124 @@ func isTerraformPlan(content []byte) bool {
 	_, hasFormatVersion := data["format_version"]
 
 	return hasResourceChanges && hasFormatVersion
+}
+
+// findBlockLinesFromJSON locates the start and end lines of a specific block or nested element within a block.
+// The file should contain structured data (e.g., JSON) and this function expects to search for blocks with specific names.
+func findBlockLinesFromJSON(file *os.File, blockName string, pathName ...string) (int, int, string) {
+	var currentLine, startLine, endLine int
+	var bracketCounter, startCounter int
+
+	// These boolean flags indicate which part of the structured data we're currently processing.
+	inBlock, inOutput, inTargetBlock := false, false, false
+
+	// Move the file pointer to the start of the file.
+	_, _ = file.Seek(0, 0)
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		currentLine++
+		line := scanner.Text()
+		trimmedLine := strings.TrimSpace(line)
+
+		// Detect the start of the desired block, path, response, etc.
+		// Depending on the blockName and provided pathName, different conditions are checked.
+
+		// Generic block detection
+		if !inBlock && (trimmedLine == fmt.Sprintf(`"%s": {`, blockName) || trimmedLine == fmt.Sprintf(`"%s": [`, blockName)) {
+			inBlock = true
+			startLine = currentLine
+			continue
+		} else if inBlock && blockName == "outputs" && trimmedLine == fmt.Sprintf(`"%s": {`, pathName[0]) {
+			// Different output block detection within the "outputs" block
+			inOutput = true
+			bracketCounter = 1
+			startLine = currentLine
+			continue
+		} else if inBlock && blockName == "resources" {
+			if inBlock && strings.Contains(trimmedLine, "{") {
+				bracketCounter++
+				startCounter = currentLine
+			}
+			if inBlock && strings.Contains(trimmedLine, "}") {
+				bracketCounter--
+			}
+
+			if inBlock && strings.Contains(trimmedLine, fmt.Sprintf(`"type": "%s"`, pathName[0])) {
+				peekCounter := 1
+				nameFound := false
+
+				for {
+					peekLine, _ := readLineN(file, currentLine+peekCounter)
+					if strings.Contains(peekLine, fmt.Sprintf(`"name": "%s"`, pathName[1])) {
+						nameFound = true
+						break
+					}
+					if strings.Contains(peekLine, "}") {
+						break
+					}
+					peekCounter++
+				}
+
+				if nameFound {
+					inTargetBlock = true
+					startLine = startCounter // Assume the opening brace is at the start of this resource
+				}
+			}
+		}
+		// If we are within a block, we need to track the opening and closing brackets
+		// to determine where the block ends.
+		if inBlock && inOutput && !inTargetBlock {
+			bracketCounter += strings.Count(line, "{")
+			bracketCounter -= strings.Count(line, "}")
+
+			if bracketCounter == 0 {
+				endLine = currentLine
+				break
+			}
+		}
+
+		if inBlock && inTargetBlock && bracketCounter == 0 {
+			endLine = currentLine
+			break
+		}
+	}
+	source := getSourceFromFile(file, startLine, endLine)
+
+	if startLine != 0 && endLine == 0 {
+		// If we found the start but not the end, reset the start to indicate the block doesn't exist in entirety.
+		startLine = 0
+	}
+
+	return startLine, endLine, source
+}
+
+func getSourceFromFile(file *os.File, startLine int, endLine int) string {
+	var source string
+	_, _ = file.Seek(0, 0) // Go to the start
+	scanner := bufio.NewScanner(file)
+	currentSourceLine := 0
+	for scanner.Scan() {
+		currentSourceLine++
+		if currentSourceLine >= startLine && currentSourceLine <= endLine {
+			source += scanner.Text() + "\n"
+		}
+		if currentSourceLine > endLine {
+			break
+		}
+	}
+	return source
+}
+
+func readLineN(file *os.File, lineNum int) (string, error) {
+	_, _ = file.Seek(0, 0) // Go to the start
+	scanner := bufio.NewScanner(file)
+	currentLine := 0
+	for scanner.Scan() {
+		currentLine++
+		if currentLine == lineNum {
+			return scanner.Text(), nil
+		}
+	}
+	return "", nil
 }
