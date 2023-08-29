@@ -360,7 +360,7 @@ func isTerraformPlan(content []byte) bool {
 // The file should contain structured data (e.g., JSON) and this function expects to search for blocks with specific names.
 func findBlockLinesFromJSON(file *os.File, blockName string, pathName ...string) (int, int, string) {
 	var currentLine, startLine, endLine int
-	var bracketCounter int
+	var bracketCounter, startCounter int
 
 	// These boolean flags indicate which part of the structured data we're currently processing.
 	inBlock, inOutput, inTargetBlock := false, false, false
@@ -391,12 +391,13 @@ func findBlockLinesFromJSON(file *os.File, blockName string, pathName ...string)
 		} else if inBlock && blockName == "resources" {
 			if inBlock && strings.Contains(trimmedLine, "{") {
 				bracketCounter++
+				startCounter = currentLine
 			}
 			if inBlock && strings.Contains(trimmedLine, "}") {
 				bracketCounter--
 			}
 
-			if inBlock && bracketCounter == 1 && strings.Contains(trimmedLine, fmt.Sprintf(`"type": "%s"`, pathName[0])) {
+			if inBlock && strings.Contains(trimmedLine, fmt.Sprintf(`"type": "%s"`, pathName[0])) {
 				peekCounter := 1
 				nameFound := false
 
@@ -414,7 +415,7 @@ func findBlockLinesFromJSON(file *os.File, blockName string, pathName ...string)
 
 				if nameFound {
 					inTargetBlock = true
-					startLine = currentLine - bracketCounter - 1 // Assume the opening brace is at the start of this resource
+					startLine = startCounter // Assume the opening brace is at the start of this resource
 				}
 			}
 		}

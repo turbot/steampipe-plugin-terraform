@@ -179,7 +179,7 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 			for resourceType, resources := range convertModelDocumentToMapInterface(doc["resource"]) {
 				// For each resource, scan its arguments
 				for resourceName, resourceData := range convertModelDocumentToMapInterface(resources) {
-					tfResource, err := buildResource(ctx, pathInfo.IsTFStateFilePath, content, path, resourceType, resourceName, convertModelDocumentToMapInterface(resourceData))
+					tfResource, err := buildResource(ctx, pathInfo.IsTFPlanFilePath, content, path, resourceType, resourceName, convertModelDocumentToMapInterface(resourceData))
 					if err != nil {
 						plugin.Logger(ctx).Error("terraform_resource.listResources", "build_resource_error", err)
 						return nil, err
@@ -203,7 +203,7 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 	return nil, nil
 }
 
-func buildResource(ctx context.Context, isTFStateFilePath bool, content []byte, path string, resourceType string, name string, d model.Document) (*terraformResource, error) {
+func buildResource(ctx context.Context, isTFFilePath bool, content []byte, path string, resourceType string, name string, d model.Document) (*terraformResource, error) {
 	tfResource := new(terraformResource)
 
 	tfResource.Path = path
@@ -216,7 +216,7 @@ func buildResource(ctx context.Context, isTFStateFilePath bool, content []byte, 
 	// Remove all "_kics" arguments
 	sanitizeDocument(d)
 
-	if isTFStateFilePath {
+	if isTFFilePath {
 		file, err := os.Open(path)
 		if err != nil {
 			plugin.Logger(ctx).Error("terraform_resource.buildResource", "open_file_error", err, "path", path)
