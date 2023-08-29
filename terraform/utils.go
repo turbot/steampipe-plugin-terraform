@@ -41,18 +41,7 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 	// will never match the requested value.
 	quals := d.EqualsQuals
 	if quals["path"] != nil {
-
-		path := d.EqualsQualString("path")
-
-		fileContent, err := os.ReadFile(path)
-		if err != nil {
-			return nil, fmt.Errorf("error reading file: %v", err)
-		}
-
-		// If the path is provided using the qual, determine the file type from its content
-		isTerraformPlan := isTerraformPlan(fileContent)
-
-		d.StreamListItem(ctx, filePath{Path: quals["path"].GetStringValue(), IsTFPlanFilePath: isTerraformPlan})
+		d.StreamListItem(ctx, filePath{Path: quals["path"].GetStringValue()})
 		return nil, nil
 	}
 
