@@ -38,7 +38,7 @@ func tableTerraformResource(ctx context.Context) *plugin.Table {
 			},
 			{
 				Name:        "mode",
-				Description: "Resource mode.",
+				Description: "The type of resource Terraform creates, either a resource (managed) or data source (data).",
 				Type:        proto.ColumnType_STRING,
 			},
 			{
@@ -48,7 +48,7 @@ func tableTerraformResource(ctx context.Context) *plugin.Table {
 			},
 			{
 				Name:        "instances",
-				Description: "Resource instances.",
+				Description: "The attributes of the resource.",
 				Type:        proto.ColumnType_JSON,
 			},
 			// Meta-arguments
