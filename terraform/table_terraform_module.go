@@ -124,7 +124,7 @@ func listModules(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData
 	}
 
 	// Return if the path is a TF plan path
-	if data.IsTFPlanFilePath && isTerraformPlan(content) {
+	if data.IsTFPlanFilePath || isTerraformPlan(content) {
 		return nil, nil
 	}
 
