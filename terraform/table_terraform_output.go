@@ -94,15 +94,15 @@ func listOutputs(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData
 	pathInfo := h.Item.(filePath)
 	path := pathInfo.Path
 
-	// Return if the path is a TF plan path
-	if pathInfo.IsTFPlanFilePath {
-		return nil, nil
-	}
-
 	content, err := os.ReadFile(path)
 	if err != nil {
 		plugin.Logger(ctx).Error("terraform_output.listOutputs", "read_file_error", err, "path", path)
 		return nil, err
+	}
+
+	// Return if the path is a TF plan path
+	if pathInfo.IsTFPlanFilePath && isTerraformPlan(content) {
+		return nil, nil
 	}
 
 	var docs []model.Document
