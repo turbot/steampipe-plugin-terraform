@@ -110,20 +110,20 @@ func listDataSources(ctx context.Context, d *plugin.QueryData, h *plugin.Hydrate
 	data := h.Item.(filePath)
 	path := data.Path
 
+	content, err := os.ReadFile(path)
+	if err != nil {
+		plugin.Logger(ctx).Error("terraform_data_source.listDataSources", "read_file_error", err, "path", path)
+		return nil, err
+	}
+
 	// Return if the path is a TF plan path
-	if data.IsTFPlanFilePath {
+	if data.IsTFPlanFilePath && !isTerraformPlan(content) {
 		return nil, nil
 	}
 
 	combinedParser, err := Parser()
 	if err != nil {
 		plugin.Logger(ctx).Error("terraform_data_source.listDataSources", "create_parser_error", err)
-		return nil, err
-	}
-
-	content, err := os.ReadFile(path)
-	if err != nil {
-		plugin.Logger(ctx).Error("terraform_data_source.listDataSources", "read_file_error", err, "path", path)
 		return nil, err
 	}
 
