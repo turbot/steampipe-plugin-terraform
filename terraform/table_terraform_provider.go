@@ -90,7 +90,7 @@ func listProviders(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 	}
 
 	// Return if the path is a TF plan path
-	if data.IsTFPlanFilePath && !isTerraformPlan(content) {
+	if data.IsTFPlanFilePath && isTerraformPlan(content) {
 		return nil, nil
 	}
 
