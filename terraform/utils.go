@@ -68,7 +68,7 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 	// Fail if no paths are specified
 	terraformConfig := GetConfig(d.Connection)
 	if terraformConfig.Paths == nil && terraformConfig.ConfigurationFilePaths == nil && terraformConfig.PlanFilePaths == nil && terraformConfig.StateFilePaths == nil {
-		return nil, errors.New("configuration_file_paths or plan_file_paths or state_file_paths must be configured")
+		return nil, nil
 	}
 
 	// Gather file path matches for the glob
