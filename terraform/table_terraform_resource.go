@@ -139,6 +139,11 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 		return nil, err
 	}
 
+	// if the file contains TF plan then set IsTFPlanFilePath to true
+	if isTerraformPlan(content) {
+		pathInfo.IsTFPlanFilePath = true
+	}
+
 	var docs []model.Document
 
 	// Check if the file contains TF plan or state

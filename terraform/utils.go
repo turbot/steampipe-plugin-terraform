@@ -47,19 +47,11 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 
 		// check if state file is provide in the qual
 		if strings.HasSuffix(path, ".tfstate") {
-			d.StreamListItem(ctx, filePath{Path: quals["path"].GetStringValue(), IsTFStateFilePath: true})
+			d.StreamListItem(ctx, filePath{Path: path, IsTFStateFilePath: true})
 			return nil, nil
 		}
 
-		fileContent, err := os.ReadFile(path)
-		if err != nil {
-			return nil, fmt.Errorf("error reading file: %v", err)
-		}
-
-		// If the path is provided using the qual, determine the file type from its content
-		isTerraformPlan := isTerraformPlan(fileContent)
-
-		d.StreamListItem(ctx, filePath{Path: quals["path"].GetStringValue(), IsTFPlanFilePath: isTerraformPlan})
+		d.StreamListItem(ctx, filePath{Path: path})
 		return nil, nil
 	}
 
