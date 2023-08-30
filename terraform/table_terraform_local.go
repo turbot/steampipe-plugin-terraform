@@ -75,7 +75,7 @@ func listLocals(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData)
 		return nil, err
 	}
 
-	// Return if the path is a TF plan path
+	// Return if the path is a TF plan or state path
 	if data.IsTFPlanFilePath || isTerraformPlan(content) || data.IsTFStateFilePath {
 		return nil, nil
 	}
