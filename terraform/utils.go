@@ -25,8 +25,9 @@ import (
 )
 
 type filePath struct {
-	Path             string
-	IsTFPlanFilePath bool
+	Path              string
+	IsTFPlanFilePath  bool
+	IsTFStateFilePath bool
 }
 
 // Use when parsing any TF file to prevent concurrent map read and write errors
@@ -41,7 +42,16 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 	// will never match the requested value.
 	quals := d.EqualsQuals
 	if quals["path"] != nil {
-		d.StreamListItem(ctx, filePath{Path: quals["path"].GetStringValue()})
+
+		path := d.EqualsQualString("path")
+
+		// check if state file is provide in the qual
+		if strings.HasSuffix(path, ".tfstate") {
+			d.StreamListItem(ctx, filePath{Path: path, IsTFStateFilePath: true})
+			return nil, nil
+		}
+
+		d.StreamListItem(ctx, filePath{Path: path})
 		return nil, nil
 	}
 
@@ -49,13 +59,9 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 
 	// Fail if no paths are specified
 	terraformConfig := GetConfig(d.Connection)
-
-	// Should we still consider this as a required argument ??
-	// Since the plugin now supports parsing TF plan as well. What will happen if the config has only plan_file_paths defined? Should we return error ??
-
-	// if terraformConfig.ConfigurationFilePaths == nil {
-	// 	return nil, errors.New("configuration_file_path must be configured")
-	// }
+	if terraformConfig.Paths == nil && terraformConfig.ConfigurationFilePaths == nil && terraformConfig.PlanFilePaths == nil && terraformConfig.StateFilePaths == nil {
+		return nil, nil
+	}
 
 	// Gather file path matches for the glob
 	var paths, matches []string
@@ -114,6 +120,31 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 		})
 	}
 
+	// Gather TF state file path matches for the glob
+	var matchedStateFilePaths []string
+	stateFilePaths := terraformConfig.StateFilePaths
+	for _, i := range stateFilePaths {
+
+		// List the files in the given source directory
+		files, err := d.GetSourceFiles(i)
+		if err != nil {
+			return nil, err
+		}
+		matchedStateFilePaths = append(matchedStateFilePaths, files...)
+	}
+
+	// Sanitize the matches to ignore the directories
+	for _, i := range matchedStateFilePaths {
+
+		// Ignore directories
+		if filehelpers.DirectoryExists(i) {
+			continue
+		}
+		d.StreamListItem(ctx, filePath{
+			Path:              i,
+			IsTFStateFilePath: true,
+		})
+	}
 	return nil, nil
 }
 

@@ -116,8 +116,8 @@ func listDataSources(ctx context.Context, d *plugin.QueryData, h *plugin.Hydrate
 		return nil, err
 	}
 
-	// Return if the path is a TF plan path
-	if data.IsTFPlanFilePath || isTerraformPlan(content) {
+	// Return if the path is a TF plan or state path
+	if data.IsTFPlanFilePath || isTerraformPlan(content) || data.IsTFStateFilePath {
 		return nil, nil
 	}
 

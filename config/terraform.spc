@@ -3,7 +3,8 @@ connection "terraform" {
 
   # Configuration file paths is a list of locations to search for Terraform configuration files
   # Similarly, Plan File Paths is a list of locations to search for Terraform plan files
-  # Configuration file paths can be configured with a local directory, a remote Git repository URL, or an S3 bucket URL
+  # Similarly, State File Paths is a list of locations to search for Terraform state files
+  # Configuration, plan or state file paths can be configured with a local directory, a remote Git repository URL, or an S3 bucket URL
   # Wildcard based searches are supported, including recursive searches
   # Local paths are resolved relative to the current working directory (CWD)
 
@@ -21,4 +22,5 @@ connection "terraform" {
   # Defaults to CWD
   configuration_file_paths = ["*.tf"]
   plan_file_paths          = ["tfplan.json", "*.tfplan.json"]
+  state_file_paths         = ["*.tfstate"]
 }

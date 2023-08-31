@@ -37,8 +37,18 @@ func tableTerraformResource(ctx context.Context) *plugin.Table {
 				Type:        proto.ColumnType_STRING,
 			},
 			{
+				Name:        "mode",
+				Description: "The type of resource Terraform creates, either a resource (managed) or data source (data).",
+				Type:        proto.ColumnType_STRING,
+			},
+			{
 				Name:        "arguments",
 				Description: "Resource arguments.",
+				Type:        proto.ColumnType_JSON,
+			},
+			{
+				Name:        "instances",
+				Description: "The attributes of the resource.",
 				Type:        proto.ColumnType_JSON,
 			},
 			// Meta-arguments
@@ -100,6 +110,7 @@ type terraformResource struct {
 	Name      string
 	Type      string
 	Path      string
+	Mode      string
 	StartLine int
 	Source    string
 	EndLine   int
@@ -112,6 +123,7 @@ type terraformResource struct {
 	// A resource's provider arg will always reference a provider block
 	Provider  string
 	Lifecycle map[string]interface{}
+	Instances map[string]interface{}
 }
 
 func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
@@ -134,8 +146,8 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 
 	var docs []model.Document
 
-	// Check if the file contains TF plan
-	if pathInfo.IsTFPlanFilePath {
+	// Check if the file contains TF plan or state
+	if pathInfo.IsTFPlanFilePath || pathInfo.IsTFStateFilePath {
 		// Initialize the JSON parser
 		jsonParser := p.Parser{}
 
@@ -144,7 +156,7 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 		documents, _, err := jsonParser.Parse(str, content)
 		if err != nil {
 			plugin.Logger(ctx).Error("terraform_resource.listResources", "parse_error", err, "path", path)
-			return nil, fmt.Errorf("failed to parse file %s: %v", path, err)
+			return nil, fmt.Errorf("failed to parse plan or state file %s: %v", path, err)
 		}
 		docs = append(docs, documents...)
 	} else {
@@ -180,13 +192,23 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 					d.StreamListItem(ctx, tfResource)
 				}
 			}
+		} else if doc["resources"] != nil { // state file returns resources
+			for _, resource := range doc["resources"].([]interface{}) {
+				resourceData := convertModelDocumentToMapInterface(resource)
+				tfResource, err := buildResource(ctx, pathInfo.IsTFStateFilePath, content, path, resourceData["type"].(string), resourceData["name"].(string), resourceData)
+				if err != nil {
+					plugin.Logger(ctx).Error("terraform_resource.listResources", "build_resource_error", err)
+					return nil, err
+				}
+				d.StreamListItem(ctx, tfResource)
+			}
 		}
 	}
 
 	return nil, nil
 }
 
-func buildResource(ctx context.Context, isTFPlanFilePath bool, content []byte, path string, resourceType string, name string, d model.Document) (*terraformResource, error) {
+func buildResource(ctx context.Context, isTFFilePath bool, content []byte, path string, resourceType string, name string, d model.Document) (*terraformResource, error) {
 	tfResource := new(terraformResource)
 
 	tfResource.Path = path
@@ -194,11 +216,12 @@ func buildResource(ctx context.Context, isTFPlanFilePath bool, content []byte, p
 	tfResource.Name = name
 	tfResource.Arguments = make(map[string]interface{})
 	tfResource.Lifecycle = make(map[string]interface{})
+	tfResource.Instances = make(map[string]interface{})
 
 	// Remove all "_kics" arguments
 	sanitizeDocument(d)
 
-	if isTFPlanFilePath {
+	if isTFFilePath {
 		file, err := os.Open(path)
 		if err != nil {
 			plugin.Logger(ctx).Error("terraform_resource.buildResource", "open_file_error", err, "path", path)
@@ -219,7 +242,6 @@ func buildResource(ctx context.Context, isTFPlanFilePath bool, content []byte, p
 		tfResource.Source = source
 		tfResource.EndLine = endPosition.Line
 	}
-
 	// TODO: Can we return source code as well?
 	for k, v := range d {
 		switch k {
@@ -248,6 +270,28 @@ func buildResource(ctx context.Context, isTFPlanFilePath bool, content []byte, p
 				return tfResource, fmt.Errorf("The 'provider' argument for resource '%s' must be of type string", name)
 			}
 			tfResource.Provider = v.(string)
+
+		case "name":
+			if reflect.TypeOf(v).String() != "string" {
+				return tfResource, fmt.Errorf("The 'name' argument for resource '%s' must be of type string", name)
+			}
+			if tfResource.Name == "" {
+				tfResource.Name = v.(string)
+			}
+
+		case "type":
+			if reflect.TypeOf(v).String() != "string" {
+				return tfResource, fmt.Errorf("The 'type' argument for resource '%s' must be of type string", name)
+			}
+			if tfResource.Name == "" {
+				tfResource.Type = v.(string)
+			}
+
+		case "mode":
+			if reflect.TypeOf(v).String() != "string" {
+				return tfResource, fmt.Errorf("The 'mode' argument for resource '%s' must be of type string", name)
+			}
+			tfResource.Mode = v.(string)
 
 		case "for_each":
 			valStr, err := convertExpressionValue(v)
@@ -278,6 +322,18 @@ func buildResource(ctx context.Context, isTFPlanFilePath bool, content []byte, p
 			}
 			tfResource.DependsOn = s
 
+		case "instances":
+			if reflect.TypeOf(v).String() != "[]interface {}" {
+				return tfResource, fmt.Errorf("The 'instances' argument for resource '%s' must be of type list", name)
+			}
+			for _, v := range v.([]interface{}) {
+				convertedValue := convertModelDocumentToMapInterface(v)
+				cleanedValue := removeKicsLabels(convertedValue).(map[string]interface{})
+				for property, value := range cleanedValue {
+					tfResource.Instances[property] = value
+				}
+			}
+
 		// It's safe to add any remaining arguments since we've already removed all "_kics" arguments
 		default:
 			tfResource.Arguments[k] = v
@@ -297,4 +353,23 @@ func convertModelDocumentToMapInterface(data interface{}) map[string]interface{}
 		result = item
 	}
 	return result
+}
+
+func removeKicsLabels(data interface{}) interface{} {
+	if dataMap, isMap := data.(map[string]interface{}); isMap {
+		for key, value := range dataMap {
+			if strings.HasPrefix(key, "_kics") {
+				delete(dataMap, key)
+			} else {
+				dataMap[key] = removeKicsLabels(value)
+			}
+		}
+		return dataMap
+	} else if dataList, isList := data.([]interface{}); isList {
+		for i, item := range dataList {
+			dataList[i] = removeKicsLabels(item)
+		}
+		return dataList
+	}
+	return data
 }

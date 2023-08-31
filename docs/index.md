@@ -294,6 +294,30 @@ connection "terraform" {
 }
 ```
 
+## Scanning Terraform State
+
+The plugin supports scanning the Terraform states, and allows the users to query them using Steampipe.
+
+**Note:** The plugin only scans the the outputs and resources from the Terraform state.
+
+To get the Terraform state simply follow the below steps:
+
+- Run `terraform apply` to automatically generate state file `terraform.tfstate`.
+
+```shell
+terraform apply
+```
+
+- Add the path of the file `terraform.tfstate` to the `state_file_paths` argument in the config to read the state using Steampipe.
+
+```hcl
+connection "terraform" {
+  plugin = "terraform"
+
+  state_file_paths = ["terraform.tfstate"]
+}
+```
+
 ## Get Involved
 
 - Open source: https://github.com/turbot/steampipe-plugin-terraform
