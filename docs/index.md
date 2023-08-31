@@ -16,7 +16,7 @@ A Terraform configuration file is used to declare resources, variables, modules,
 
 [Steampipe](https://steampipe.io) is an open source CLI to instantly query data using SQL.
 
-The plugin supports scanning Terraform configuration files from various sources (e.g., [Local files](#configuring-local-file-paths), [Git](#configuring-remote-git-repository-urls), [S3](#configuring-s3-urls) etc.), and [parsing Terraform plans](#scanning-terraform-plan) as well.
+The plugin supports scanning Terraform configuration files from various sources (e.g., [Local files](#configuring-local-file-paths), [Git](#configuring-remote-git-repository-urls), [S3](#configuring-s3-urls) etc.), [parsing Terraform states](#scanning-terraform-state) and [parsing Terraform plans](#scanning-terraform-plan) as well.
 
 ## Documentation
 
@@ -41,6 +41,8 @@ connection "terraform" {
   plugin = "terraform"
 
   configuration_file_paths = ["*.tf"]
+  plan_file_paths          = ["tfplan.json", "*.tfplan.json"]
+  state_file_paths         = ["*.tfstate"]
 }
 ```
 
