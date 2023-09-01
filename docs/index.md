@@ -292,7 +292,11 @@ terraform show -json tfplan > tfplan.json
 connection "terraform" {
   plugin = "terraform"
 
-  plan_file_paths = ["/path/to/tfplan.json"]
+  plan_file_paths = [
+    "/path/to/tfplan.json",
+    "github.com/turbot/steampipe-plugin-aws//aws-test/tests/plan_files//tfplan.json",
+    "s3::https://bucket-1.s3.us-east-1.amazonaws.com/test_plan//*.json"
+  ]
 }
 ```
 
@@ -316,7 +320,11 @@ terraform apply
 connection "terraform" {
   plugin = "terraform"
 
-  state_file_paths = ["terraform.tfstate"]
+  state_file_paths = [
+    "terraform.tfstate",
+    "github.com/turbot/steampipe-plugin-aws//aws-test/tests/state_files//terraform.tfstate",
+    "s3::https://bucket-1.s3.us-east-1.amazonaws.com/state_files//*.tfstate"
+  ]
 }
 ```
 
