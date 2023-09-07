@@ -80,17 +80,23 @@ type terraformProvider struct {
 func listProviders(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	// The path comes from a parent hydate, defaulting to the config paths or
 	// available by the optional key column
-	path := h.Item.(filePath).Path
-
-	combinedParser, err := Parser()
-	if err != nil {
-		plugin.Logger(ctx).Error("terraform_provider.listProviders", "create_parser_error", err)
-		return nil, err
-	}
+	data := h.Item.(filePath)
+	path := data.Path
 
 	content, err := os.ReadFile(path)
 	if err != nil {
 		plugin.Logger(ctx).Error("terraform_provider.listProviders", "read_file_error", err, "path", path)
+		return nil, err
+	}
+
+	// Return if the path is a TF plan or state path
+	if data.IsTFPlanFilePath || isTerraformPlan(content) || data.IsTFStateFilePath {
+		return nil, nil
+	}
+
+	combinedParser, err := Parser()
+	if err != nil {
+		plugin.Logger(ctx).Error("terraform_provider.listProviders", "create_parser_error", err)
 		return nil, err
 	}
 

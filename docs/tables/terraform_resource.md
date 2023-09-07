@@ -119,3 +119,30 @@ where
   and (arguments -> 'public_network_access_enabled' is null or (arguments -> 'public_network_access_enabled')::boolean);
 ```
 
+### List resources from a plan file
+
+```sql
+select
+  name,
+  type,
+  arguments,
+  path
+from
+  terraform_resource
+where
+  path = '/path/to/tfplan.json';
+```
+
+### List resources from a state file
+
+```sql
+select
+  name,
+  type,
+  arguments,
+  path
+from
+  terraform_resource
+where
+  path = '/path/to/terraform.tfstate';
+```

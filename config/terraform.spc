@@ -1,8 +1,10 @@
 connection "terraform" {
   plugin = "terraform"
 
-  # Paths is a list of locations to search for Terraform configuration files
-  # Paths can be configured with a local directory, a remote Git repository URL, or an S3 bucket URL
+  # Configuration file paths is a list of locations to search for Terraform configuration files
+  # Plan File Paths is a list of locations to search for Terraform plan files
+  # State File Paths is a list of locations to search for Terraform state files
+  # Configuration, plan or state file paths can be configured with a local directory, a remote Git repository URL, or an S3 bucket URL
   # Wildcard based searches are supported, including recursive searches
   # Local paths are resolved relative to the current working directory (CWD)
 
@@ -18,5 +20,7 @@ connection "terraform" {
   # the CWD will be matched, which may cause errors if incompatible file types exist
 
   # Defaults to CWD
-  paths = [ "*.tf" ]
+  configuration_file_paths = ["*.tf"]
+  plan_file_paths          = ["tfplan.json", "*.tfplan.json"]
+  state_file_paths         = ["*.tfstate"]
 }

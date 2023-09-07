@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"strings"
 
 	"github.com/Checkmarx/kics/pkg/model"
+	p "github.com/Checkmarx/kics/pkg/parser/json"
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 	"github.com/zclconf/go-cty/cty/gocty"
@@ -87,15 +89,10 @@ type terraformOutput struct {
 }
 
 func listOutputs(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
-	// The path comes from a parent hydate, defaulting to the config paths or
+	// The path comes from a parent hydrate, defaulting to the config paths or
 	// available by the optional key column
-	path := h.Item.(filePath).Path
-
-	combinedParser, err := Parser()
-	if err != nil {
-		plugin.Logger(ctx).Error("terraform_output.listOutputs", "create_parser_error", err)
-		return nil, err
-	}
+	pathInfo := h.Item.(filePath)
+	path := pathInfo.Path
 
 	content, err := os.ReadFile(path)
 	if err != nil {
@@ -103,20 +100,61 @@ func listOutputs(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData
 		return nil, err
 	}
 
-	var tfOutput terraformOutput
+	// Return if the path is a TF plan path
+	if pathInfo.IsTFPlanFilePath || isTerraformPlan(content) {
+		return nil, nil
+	}
 
-	for _, parser := range combinedParser {
-		parsedDocs, err := ParseContent(ctx, d, path, content, parser)
+	var docs []model.Document
+
+	// Check if the file contains TF state
+	if pathInfo.IsTFStateFilePath {
+		// Initialize the JSON parser
+		jsonParser := p.Parser{}
+
+		// Parse the file content using the JSON parser
+		var str string
+		documents, _, err := jsonParser.Parse(str, content)
 		if err != nil {
-			plugin.Logger(ctx).Error("terraform_output.listOutputs", "parse_error", err, "path", path)
-			return nil, fmt.Errorf("failed to parse file %s: %v", path, err)
+			plugin.Logger(ctx).Error("terraform_output.listOutputs", "state_parse_error", err, "path", path)
+			return nil, fmt.Errorf("failed to parse state file %s: %v", path, err)
 		}
 
-		for _, doc := range parsedDocs.Docs {
-			if doc["output"] != nil {
-				// For each output, scan its arguments
-				for outputName, outputData := range doc["output"].(model.Document) {
-					tfOutput, err = buildOutput(ctx, path, content, outputName, outputData.(model.Document))
+		docs = append(docs, documents...)
+	} else {
+		// Build the terraform parser
+		combinedParser, err := Parser()
+		if err != nil {
+			plugin.Logger(ctx).Error("terraform_output.listOutputs", "create_parser_error", err)
+			return nil, err
+		}
+
+		for _, parser := range combinedParser {
+			parsedDocs, err := ParseContent(ctx, d, path, content, parser)
+			if err != nil {
+				plugin.Logger(ctx).Error("terraform_output.listOutputs", "parse_error", err, "path", path)
+				return nil, fmt.Errorf("failed to parse file %s: %v", path, err)
+			}
+			docs = append(docs, parsedDocs.Docs...)
+		}
+	}
+
+	for _, doc := range docs {
+		if doc["output"] != nil {
+			// For each output, scan its arguments
+			for outputName, outputData := range doc["output"].(model.Document) {
+				tfOutput, err := buildOutput(ctx, pathInfo.IsTFStateFilePath, path, content, outputName, outputData.(model.Document))
+				if err != nil {
+					plugin.Logger(ctx).Error("terraform_output.listOutputs", "build_output_error", err)
+					return nil, err
+				}
+				d.StreamListItem(ctx, tfOutput)
+			}
+		} else if doc["outputs"] != nil {
+			// For each output, scan its arguments
+			for outputName, outputData := range convertModelDocumentToMapInterface(doc["outputs"]) {
+				if !strings.HasPrefix(outputName, "_kics") {
+					tfOutput, err := buildOutput(ctx, pathInfo.IsTFStateFilePath, path, content, outputName, convertModelDocumentToMapInterface(outputData))
 					if err != nil {
 						plugin.Logger(ctx).Error("terraform_output.listOutputs", "build_output_error", err)
 						return nil, err
@@ -130,7 +168,7 @@ func listOutputs(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData
 	return nil, nil
 }
 
-func buildOutput(ctx context.Context, path string, content []byte, name string, d model.Document) (terraformOutput, error) {
+func buildOutput(ctx context.Context, isTFStateFilePath bool, path string, content []byte, name string, d model.Document) (terraformOutput, error) {
 	var tfOutput terraformOutput
 
 	tfOutput.Path = path
@@ -139,15 +177,26 @@ func buildOutput(ctx context.Context, path string, content []byte, name string, 
 	// Remove all "_kics" arguments
 	sanitizeDocument(d)
 
-	start, end, source, err := getBlock(ctx, path, content, "output", []string{name})
-	if err != nil {
-		plugin.Logger(ctx).Error("terraform_output.buildOutput", "getBlock", err)
-		return tfOutput, err
+	if isTFStateFilePath {
+		file, err := os.Open(path)
+		if err != nil {
+			plugin.Logger(ctx).Error("terraform_output.listOutputs", "open_file_error", err, "path", path)
+			return tfOutput, err
+		}
+		startLine, endLine, source := findBlockLinesFromJSON(file, "outputs", name)
+		tfOutput.StartLine = startLine
+		tfOutput.EndLine = endLine
+		tfOutput.Source = source
+	} else {
+		start, end, source, err := getBlock(ctx, path, content, "output", []string{name})
+		if err != nil {
+			plugin.Logger(ctx).Error("terraform_output.buildOutput", "getBlock", err)
+			return tfOutput, err
+		}
+		tfOutput.StartLine = start.Line
+		tfOutput.EndLine = end.Line
+		tfOutput.Source = source
 	}
-	tfOutput.StartLine = start.Line
-	tfOutput.EndLine = end.Line
-	tfOutput.Source = source
-
 	for k, v := range d {
 		switch k {
 		case "description":

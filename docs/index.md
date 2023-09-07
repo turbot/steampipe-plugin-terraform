@@ -16,6 +16,46 @@ A Terraform configuration file is used to declare resources, variables, modules,
 
 [Steampipe](https://steampipe.io) is an open source CLI to instantly query data using SQL.
 
+The plugin supports scanning Terraform configuration files from various sources (e.g., [Local files](#configuring-local-file-paths), [Git](#configuring-remote-git-repository-urls), [S3](#configuring-s3-urls) etc.), [parsing Terraform states](#scanning-terraform-state) and [parsing Terraform plans](#scanning-terraform-plan) as well.
+
+## Documentation
+
+- **[Table definitions & examples →](/plugins/turbot/terraform/tables)**
+
+## Get Started
+
+### Install
+
+Download and install the latest Terraform plugin:
+
+```bash
+steampipe plugin install terraform
+```
+
+### Configuration
+
+Installing the latest terraform plugin will create a config file (`~/.steampipe/config/terraform.spc`) with a single connection named `terraform`:
+
+```hcl
+connection "terraform" {
+  plugin = "terraform"
+
+  configuration_file_paths = ["*.tf"]
+  plan_file_paths          = ["tfplan.json", "*.tfplan.json"]
+  state_file_paths         = ["*.tfstate"]
+}
+```
+
+For a full list of configuration arguments, please see the [default configuration file](https://github.com/turbot/steampipe-plugin-terraform/blob/main/config/terraform.spc).
+
+### Run a Query
+
+Run steampipe:
+
+```shell
+steampipe query
+```
+
 Query all resources in your Terraform files:
 
 ```sql
@@ -27,7 +67,7 @@ from
   terraform_resource;
 ```
 
-```
+```sh
 > select name, type, jsonb_pretty(arguments) as args from terraform_resource;
 +------------+----------------+--------------------------------------------+
 | name       | type           | args                                       |
@@ -57,62 +97,22 @@ from
 +------------+----------------+--------------------------------------------+
 ```
 
-## Documentation
+## Configuring Paths
 
-- **[Table definitions & examples →](/plugins/turbot/terraform/tables)**
+The plugin requires a list of locations to search for the Terraform configuration files. Paths can be configured with [Local files](#configuring-local-file-paths), [Git URLs](#configuring-remote-git-repository-urls), [S3 URLs](#configuring-s3-urls) etc.
 
-## Get started
-
-### Install
-
-Download and install the latest Terraform plugin:
-
-```bash
-steampipe plugin install terraform
-```
-
-### Credentials
-
-No credentials are required.
-
-### Configuration
-
-Installing the latest terraform plugin will create a config file (`~/.steampipe/config/terraform.spc`) with a single connection named `terraform`:
+**Note:** Local file paths are resolved relative to the current working directory (CWD).
 
 ```hcl
 connection "terraform" {
   plugin = "terraform"
 
-  # Paths is a list of locations to search for Terraform configuration files
-  # Paths can be configured with a local directory, a remote Git repository URL, or an S3 bucket URL
-  # Wildcard based searches are supported, including recursive searches
-  # Local paths are resolved relative to the current working directory (CWD)
-
-  # For example:
-  #  - "*.tf" matches all Terraform configuration files in the CWD
-  #  - "**/*.tf" matches all Terraform configuration files in the CWD and all sub-directories
-  #  - "../*.tf" matches all Terraform configuration files in the CWD's parent directory
-  #  - "steampipe*.tf" matches all Terraform configuration files starting with "steampipe" in the CWD
-  #  - "/path/to/dir/*.tf" matches all Terraform configuration files in a specific directory
-  #  - "/path/to/dir/main.tf" matches a specific file
-
-  # If paths includes "*", all files (including non-Terraform configuration files) in
-  # the CWD will be matched, which may cause errors if incompatible file types exist
-
-  # Defaults to CWD
-  paths = [ "*.tf" ]
+  configuration_file_paths = [
+    "terraform_test.tf",
+    "github.com/turbot/steampipe-plugin-aws//aws-test/tests/aws_acm_certificate//variables.tf"
+  ]
 }
 ```
-
-### Supported Path Formats
-
-The `paths` config argument is flexible and can search for Terraform configuration files from several different sources, e.g., local directory paths, Git, S3.
-
-The following sources are supported:
-
-- [Local files](#configuring-local-file-paths)
-- [Remote Git repositories](#configuring-remote-git-repository-urls)
-- [S3](#configuring-s3-urls)
 
 Paths may [include wildcards](https://pkg.go.dev/path/filepath#Match) and support `**` for recursive matching. For example:
 
@@ -120,7 +120,7 @@ Paths may [include wildcards](https://pkg.go.dev/path/filepath#Match) and suppor
 connection "terraform" {
   plugin = "terraform"
 
-  paths = [
+  configuration_file_paths = [
     "*.tf",
     "~/*.tf",
     "github.com/turbot/steampipe-plugin-aws//aws-test/tests/aws_acm_certificate//*.tf",
@@ -134,7 +134,7 @@ connection "terraform" {
 
 **Note**: If any path matches on `*` without `.tf`, all files (including non-Terraform configuration files) in the directory will be matched, which may cause errors if incompatible file types exist.
 
-#### Configuring Local File Paths
+### Configuring Local File Paths
 
 You can define a list of local directory paths to search for terraform files. Paths are resolved relative to the current working directory. For example:
 
@@ -151,11 +151,11 @@ You can define a list of local directory paths to search for terraform files. Pa
 connection "terraform" {
   plugin = "terraform"
 
-  paths = [ "*.tf", "~/*.tf", "/path/to/dir/main.tf" ]
+  configuration_file_paths = [ "*.tf", "~/*.tf", "/path/to/dir/main.tf" ]
 }
 ```
 
-#### Configuring Remote Git Repository URLs
+### Configuring Remote Git Repository URLs
 
 You can also configure `paths` with any Git remote repository URLs, e.g., GitHub, BitBucket, GitLab. The plugin will then attempt to retrieve any Terraform configuration files from the remote repositories.
 
@@ -176,7 +176,7 @@ You can specify a subdirectory after a double-slash (`//`) if you want to downlo
 connection "terraform" {
   plugin = "terraform"
 
-  paths = [ "github.com/turbot/steampipe-plugin-aws//aws-test/tests/aws_acm_certificate//*.tf" ]
+  configuration_file_paths = [ "github.com/turbot/steampipe-plugin-aws//aws-test/tests/aws_acm_certificate//*.tf" ]
 }
 ```
 
@@ -186,7 +186,7 @@ Similarly, you can define a list of GitLab and BitBucket URLs to search for Terr
 connection "terraform" {
   plugin = "terraform"
 
-  paths = [
+  configuration_file_paths = [
     "github.com/turbot/steampipe-plugin-aws//**/*.tf",
     "github.com/hashicorp/terraform-guides//infrastructure-as-code//**/*.tf",
     "bitbucket.org/benturrell/terraform-arcgis-portal//modules/shared//*.tf",
@@ -197,11 +197,11 @@ connection "terraform" {
 }
 ```
 
-#### Configuring S3 URLs
+### Configuring S3 URLs
 
 You can also query all Terraform configuration files stored inside an S3 bucket (public or private) using the bucket URL.
 
-##### Accessing a Private Bucket
+#### Accessing a Private Bucket
 
 In order to access your files in a private S3 bucket, you will need to configure your credentials. You can use your configured AWS profile from local `~/.aws/config`, or pass the credentials using the standard AWS environment variables, e.g., `AWS_PROFILE`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`.
 
@@ -215,7 +215,7 @@ You can also authenticate your request by setting the AWS profile and region in 
 connection "terraform" {
   plugin = "terraform"
 
-  paths = [
+  configuration_file_paths = [
     "s3::https://bucket-2.s3.us-east-1.amazonaws.com//*.tf?aws_profile=<AWS_PROFILE>",
     "s3::https://bucket-2.s3.us-east-1.amazonaws.com/test_folder//*.tf?aws_profile=<AWS_PROFILE>"
   ]
@@ -242,21 +242,14 @@ If the bucket is in another AWS account, the bucket policy will need to grant ac
       "Principal": {
         "AWS": "arn:aws:iam::123456789012:user/YOUR_USER"
       },
-      "Action": [
-        "s3:ListBucket",
-        "s3:GetObject",
-        "s3:GetObjectVersion"
-      ],
-      "Resource": [
-        "arn:aws:s3:::test-bucket1",
-        "arn:aws:s3:::test-bucket1/*"
-      ]
+      "Action": ["s3:ListBucket", "s3:GetObject", "s3:GetObjectVersion"],
+      "Resource": ["arn:aws:s3:::test-bucket1", "arn:aws:s3:::test-bucket1/*"]
     }
   ]
 }
 ```
 
-##### Accessing a Public Bucket
+#### Accessing a Public Bucket
 
 Public access granted to buckets and objects through ACLs and bucket policies allows any user access to data in the bucket. We do not recommend making S3 buckets public, but if there are specific objects you'd like to make public, please see [How can I grant public read access to some objects in my Amazon S3 bucket?](https://aws.amazon.com/premiumsupport/knowledge-center/read-access-objects-s3-bucket/).
 
@@ -266,14 +259,76 @@ You can query any public S3 bucket directly using the URL without passing creden
 connection "terraform" {
   plugin = "terraform"
 
-  paths = [
+  configuration_file_paths = [
     "s3::https://bucket-1.s3.us-east-1.amazonaws.com/test_folder//*.tf",
     "s3::https://bucket-2.s3.us-east-1.amazonaws.com/test_folder//**/*.tf"
   ]
 }
 ```
 
-## Get involved
+## Scanning Terraform Plan
+
+The plugin supports scanning the Terraform plans given in JSON, and allows the users to query them using Steampipe.
+
+**Note:** The plugin only scans the resource changes from the Terraform plan.
+
+To get the Terraform plan in JSON format simply follow the below steps:
+
+- Run `terraform plan` with `-out` flag to store the generated plan to the given filename. Terraform will allow any filename for the plan file, but a typical convention is to name it `tfplan`.
+
+```shell
+terraform plan -out=tfplan
+```
+
+- Run `terraform show` command with `-json` flag to get the plan in JSON format, and store the output in a file.
+
+```shell
+terraform show -json tfplan > tfplan.json
+```
+
+- And, finally add the path `tfplan.json` to the `plan_file_paths` argument in the config to read the plan using Steampipe.
+
+```hcl
+connection "terraform" {
+  plugin = "terraform"
+
+  plan_file_paths = [
+    "/path/to/tfplan.json",
+    "github.com/turbot/steampipe-plugin-aws//aws-test/tests/plan_files//tfplan.json",
+    "s3::https://bucket-1.s3.us-east-1.amazonaws.com/test_plan//*.json"
+  ]
+}
+```
+
+## Scanning Terraform State
+
+The plugin supports scanning the Terraform states, and allows the users to query them using Steampipe.
+
+**Note:** The plugin only scans the the outputs and resources from the Terraform state.
+
+To get the Terraform state simply follow the below steps:
+
+- Run `terraform apply` to automatically generate state file `terraform.tfstate`.
+
+```shell
+terraform apply
+```
+
+- Add the path of the file `terraform.tfstate` to the `state_file_paths` argument in the config to read the state using Steampipe.
+
+```hcl
+connection "terraform" {
+  plugin = "terraform"
+
+  state_file_paths = [
+    "terraform.tfstate",
+    "github.com/turbot/steampipe-plugin-aws//aws-test/tests/state_files//terraform.tfstate",
+    "s3::https://bucket-1.s3.us-east-1.amazonaws.com/state_files//*.tfstate"
+  ]
+}
+```
+
+## Get Involved
 
 - Open source: https://github.com/turbot/steampipe-plugin-terraform
 - Community: [Join #steampipe on Slack →](https://turbot.com/community/join)
