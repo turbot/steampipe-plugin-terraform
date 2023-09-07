@@ -1,3 +1,9 @@
+## v0.8.0 [2023-09-07]
+
+_Enhancements_
+
+- Added support to parse Terraform plan and state files to get resource information. ([#40](https://github.com/turbot/steampipe-plugin-terraform/pull/40))
+
 ## v0.7.0 [2023-06-20]
 
 _Dependencies_
