@@ -2,7 +2,11 @@
 
 _What's new?_
 
-- Added support to parse Terraform plan and state files to get resource information. This can be set using the `state_file_paths` config argument in the `terraform.spc` file. ([#40](https://github.com/turbot/steampipe-plugin-terraform/pull/40))
+- Added support to parse Terraform plan and state files. This can be set using the `plan_file_paths` and `state_file_paths` config arguments in the `terraform.spc` file. ([#40](https://github.com/turbot/steampipe-plugin-terraform/pull/40))
+
+_Deprecated_
+
+- The `paths` argument in the `terraform.spc` file has been deprecated and replaced with the `configuration_file_paths` argument. ([#40](https://github.com/turbot/steampipe-plugin-terraform/pull/40))
 
 ## v0.7.0 [2023-06-20]
 
