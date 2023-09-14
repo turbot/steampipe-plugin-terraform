@@ -168,15 +168,18 @@ func sanitizeDocument(d model.Document) {
 			delete(d, k)
 		}
 
-		if reflect.TypeOf(v).String() == "model.Document" {
-			sanitizeDocument(v.(model.Document))
-		}
+		// check if the arguments interface is nil
+		if v != nil {
+			if reflect.TypeOf(v).String() == "model.Document" {
+				sanitizeDocument(v.(model.Document))
+			}
 
-		// Some map arguments are returned as "[]interface {}" types from the parser
-		if reflect.TypeOf(v).String() == "[]interface {}" {
-			for _, v := range v.([]interface{}) {
-				if reflect.TypeOf(v).String() == "model.Document" {
-					sanitizeDocument(v.(model.Document))
+			// Some map arguments are returned as "[]interface {}" types from the parser
+			if reflect.TypeOf(v).String() == "[]interface {}" {
+				for _, v := range v.([]interface{}) {
+					if reflect.TypeOf(v).String() == "model.Document" {
+						sanitizeDocument(v.(model.Document))
+					}
 				}
 			}
 		}
