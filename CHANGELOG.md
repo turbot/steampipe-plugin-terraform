@@ -9,7 +9,6 @@ _Dependencies_
 - Recompiled plugin with [steampipe-plugin-sdk v5.5.1](https://github.com/turbot/steampipe-plugin-sdk/blob/main/CHANGELOG.md#v551-2023-07-26). ([#49](https://github.com/turbot/steampipe-plugin-terraform/pull/49))
 - Recompiled plugin with `github.com/turbot/go-kit v0.7.0`. ([#52](https://github.com/turbot/steampipe-plugin-terraform/pull/52))
 
-
 ## v0.8.0 [2023-09-07]
 
 _What's new?_
