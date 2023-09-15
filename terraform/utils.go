@@ -79,6 +79,12 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 		// List the files in the given source directory
 		files, err := d.GetSourceFiles(i)
 		if err != nil {
+			plugin.Logger(ctx).Error("tfConfigList.configurationFilePaths", "get_source_files_error", err)
+
+			// If the specified path is unavailable, then an empty row should populate
+			if strings.Contains(err.Error(), "failed to get directory specified by the source") {
+				return nil, nil
+			}
 			return nil, err
 		}
 		matches = append(matches, files...)
@@ -102,6 +108,12 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 		// List the files in the given source directory
 		files, err := d.GetSourceFiles(i)
 		if err != nil {
+			plugin.Logger(ctx).Error("tfConfigList.planFilePaths", "get_source_files_error", err)
+
+			// If the specified path is unavailable, then an empty row should populate
+			if strings.Contains(err.Error(), "failed to get directory specified by the source") {
+				return nil, nil
+			}
 			return nil, err
 		}
 		matchedPlanFilePaths = append(matchedPlanFilePaths, files...)
@@ -128,6 +140,12 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 		// List the files in the given source directory
 		files, err := d.GetSourceFiles(i)
 		if err != nil {
+			plugin.Logger(ctx).Error("tfConfigList.stateFilePaths", "get_source_files_error", err)
+
+			// If the specified path is unavailable, then an empty row should populate
+			if strings.Contains(err.Error(), "failed to get directory specified by the source") {
+				return nil, nil
+			}
 			return nil, err
 		}
 		matchedStateFilePaths = append(matchedStateFilePaths, files...)
@@ -168,15 +186,18 @@ func sanitizeDocument(d model.Document) {
 			delete(d, k)
 		}
 
-		if reflect.TypeOf(v).String() == "model.Document" {
-			sanitizeDocument(v.(model.Document))
-		}
+		// check if the arguments interface is nil
+		if v != nil {
+			if reflect.TypeOf(v).String() == "model.Document" {
+				sanitizeDocument(v.(model.Document))
+			}
 
-		// Some map arguments are returned as "[]interface {}" types from the parser
-		if reflect.TypeOf(v).String() == "[]interface {}" {
-			for _, v := range v.([]interface{}) {
-				if reflect.TypeOf(v).String() == "model.Document" {
-					sanitizeDocument(v.(model.Document))
+			// Some map arguments are returned as "[]interface {}" types from the parser
+			if reflect.TypeOf(v).String() == "[]interface {}" {
+				for _, v := range v.([]interface{}) {
+					if reflect.TypeOf(v).String() == "model.Document" {
+						sanitizeDocument(v.(model.Document))
+					}
 				}
 			}
 		}
