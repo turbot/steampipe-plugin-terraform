@@ -2,7 +2,7 @@
 
 _Bug fixes_
 
-- Fixed the `invalid memory address or nil pointer dereference` errors when terraform configuration or plan or state files included `null` valued arguments. ([#56](https://github.com/turbot/steampipe-plugin-terraform/pull/56))
+- Fixed the `invalid memory address or nil pointer dereference` errors when querying Terraform configuration or plan or state files that included `null` valued arguments. ([#56](https://github.com/turbot/steampipe-plugin-terraform/pull/56))
 
 _Dependencies_
 
