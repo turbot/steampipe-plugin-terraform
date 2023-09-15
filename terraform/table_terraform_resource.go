@@ -217,7 +217,7 @@ func buildResource(ctx context.Context, isTFFilePath bool, content []byte, path 
 	tfResource.Arguments = make(map[string]interface{})
 	tfResource.Lifecycle = make(map[string]interface{})
 	tfResource.Instances = make(map[string]interface{})
-
+	plugin.Logger(ctx).Error("document:::", d)
 	// Remove all "_kics" arguments
 	sanitizeDocument(d)
 

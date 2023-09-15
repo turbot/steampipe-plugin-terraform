@@ -79,7 +79,7 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 		// List the files in the given source directory
 		files, err := d.GetSourceFiles(i)
 		if err != nil {
-			plugin.Logger(ctx).Error("tfConfigList.configurationFilePaths.GetSourceFiles", err)
+			plugin.Logger(ctx).Error("tfConfigList.configurationFilePaths", "get_source_files_error", err)
 
 			// If the specified path is unavailable, then an empty row should populate
 			if strings.Contains(err.Error(), "failed to get directory specified by the source") {
@@ -108,7 +108,7 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 		// List the files in the given source directory
 		files, err := d.GetSourceFiles(i)
 		if err != nil {
-			plugin.Logger(ctx).Error("tfConfigList.planFilePaths.GetSourceFiles", err)
+			plugin.Logger(ctx).Error("tfConfigList.planFilePaths", "get_source_files_error", err)
 
 			// If the specified path is unavailable, then an empty row should populate
 			if strings.Contains(err.Error(), "failed to get directory specified by the source") {
@@ -140,7 +140,7 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 		// List the files in the given source directory
 		files, err := d.GetSourceFiles(i)
 		if err != nil {
-			plugin.Logger(ctx).Error("tfConfigList.stateFilePaths.GetSourceFiles", err)
+			plugin.Logger(ctx).Error("tfConfigList.stateFilePaths", "get_source_files_error", err)
 
 			// If the specified path is unavailable, then an empty row should populate
 			if strings.Contains(err.Error(), "failed to get directory specified by the source") {
