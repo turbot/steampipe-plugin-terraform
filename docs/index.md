@@ -266,11 +266,11 @@ connection "terraform" {
 }
 ```
 
-## Scanning Terraform Plan
+## Scanning Terraform 
 
-The plugin supports scanning the Terraform plans given in JSON, and allows the users to query them using Steampipe.
+The plugin supports scanning the Terraform plans given in JSON and allows the users to query them using Steampipe.
 
-**Note:** The plugin only scans the resource changes from the Terraform plan.
+**Note:** The plugin only scans resources from the Terraform plan. All resources will be included in the `terraform_resource` table data with any planned changes.
 
 To get the Terraform plan in JSON format simply follow the below steps:
 
@@ -302,7 +302,7 @@ connection "terraform" {
 
 ## Scanning Terraform State
 
-The plugin supports scanning the Terraform states, and allows the users to query them using Steampipe.
+The plugin supports scanning the Terraform states and allows the users to query them using Steampipe.
 
 **Note:** The plugin only scans the the outputs and resources from the Terraform state.
 
