@@ -266,7 +266,7 @@ connection "terraform" {
 }
 ```
 
-## Scanning Terraform 
+## Scanning Terraform
 
 The plugin supports scanning the Terraform plans given in JSON and allows the users to query them using Steampipe.
 
