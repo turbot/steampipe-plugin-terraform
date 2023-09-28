@@ -51,6 +51,11 @@ func tableTerraformResource(ctx context.Context) *plugin.Table {
 				Description: "TODO",
 				Type:        proto.ColumnType_JSON,
 			},
+			{
+				Name:        "attributes_std",
+				Description: "TODO",
+				Type:        proto.ColumnType_JSON,
+			},
 
 			// TODO: Remove
 			// {
@@ -133,7 +138,8 @@ type terraformResource struct {
 	Lifecycle map[string]interface{}
 	// TODO: Remove
 	// Instances  map[string]interface{}
-	Attributes interface{}
+	Attributes    interface{}
+	AttributesStd interface{}
 }
 
 func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
@@ -199,8 +205,8 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 						plugin.Logger(ctx).Error("terraform_resource.listResources", "build_resource_error", err)
 						return nil, err
 					}
-					// Copy the arguments data into attributes
-					tfResource.Attributes = tfResource.Arguments
+					// Copy the arguments data into attributes_std
+					tfResource.AttributesStd = tfResource.Arguments
 					d.StreamListItem(ctx, tfResource)
 				}
 			}
@@ -227,6 +233,10 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 							tfResource.Attributes = cleanedValue[property]
 						}
 					}
+
+					// Copy the attributes value to attributes_std
+					tfResource.AttributesStd = tfResource.Attributes
+
 					d.StreamListItem(ctx, tfResource)
 				}
 			}
