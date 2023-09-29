@@ -410,6 +410,34 @@ func findBlockLinesFromJSON(file *os.File, blockName string, pathName ...string)
 				bracketCounter--
 			}
 
+			// Get the start line info for the plan file data
+			// For terraform plan we need a special handling since
+			// if we use the count or for_each, in that case the resource configurations in the terraform plan can have more than 1 resource object with same name and type.
+			// So, to avoid the conflict use address and type instead which is unique and only applicable for terraform plan file.
+			if inBlock && strings.Contains(trimmedLine, fmt.Sprintf(`"address": "%s"`, pathName[0])) {
+				peekCounter := 1
+				nameFound := false
+
+				for {
+					peekLine, _ := readLineN(file, currentLine+peekCounter)
+					if strings.Contains(peekLine, fmt.Sprintf(`"type": "%s"`, pathName[1])) {
+						nameFound = true
+						break
+					}
+					if strings.Contains(peekLine, "}") {
+						break
+					}
+					peekCounter++
+				}
+
+				if nameFound {
+					inTargetBlock = true
+					startLine = startCounter // Assume the opening brace is at the start of this resource
+				}
+			}
+
+			// Get the start line info from terraform state file.
+			// Match the type and name of the resource to get the start position
 			if inBlock && strings.Contains(trimmedLine, fmt.Sprintf(`"type": "%s"`, pathName[0])) {
 				peekCounter := 1
 				nameFound := false

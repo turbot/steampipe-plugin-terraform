@@ -42,6 +42,11 @@ func tableTerraformResource(ctx context.Context) *plugin.Table {
 				Type:        proto.ColumnType_STRING,
 			},
 			{
+				Name:        "address",
+				Description: "TODO",
+				Type:        proto.ColumnType_STRING,
+			},
+			{
 				Name:        "arguments",
 				Description: "Resource arguments.",
 				Type:        proto.ColumnType_JSON,
@@ -140,6 +145,7 @@ type terraformResource struct {
 	// Instances  map[string]interface{}
 	Attributes    interface{}
 	AttributesStd interface{}
+	Address       string
 }
 
 func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
@@ -162,8 +168,22 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 
 	var docs []model.Document
 
-	// Check if the file contains TF plan or state
-	if pathInfo.IsTFPlanFilePath || pathInfo.IsTFStateFilePath {
+	if pathInfo.IsTFPlanFilePath {
+		planContent, err := getTerraformPlanContentFromBytes(content)
+		if err != nil {
+			return nil, err
+		}
+		lookupPath := planContent.PlannedValues.RootModule
+
+		for _, resource := range lookupPath.Resources {
+			tfResource, err := buildTerraformPlanResource(path, resource)
+			if err != nil {
+				return nil, err
+			}
+
+			d.StreamListItem(ctx, tfResource)
+		}
+	} else if pathInfo.IsTFStateFilePath { // Check if the file contains TF plan or state
 		// Initialize the JSON parser
 		jsonParser := p.Parser{}
 
@@ -207,6 +227,11 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 					}
 					// Copy the arguments data into attributes_std
 					tfResource.AttributesStd = tfResource.Arguments
+
+					if tfResource.Address == "" {
+						tfResource.Address = fmt.Sprintf("%s.%s", tfResource.Type, tfResource.Name)
+					}
+
 					d.StreamListItem(ctx, tfResource)
 				}
 			}
@@ -232,10 +257,20 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 						if property == "attributes" {
 							tfResource.Attributes = cleanedValue[property]
 						}
+
+						if property == "index_key" {
+							if index, ok := cleanedValue[property].(float64); ok {
+								tfResource.Address = fmt.Sprintf("%s.%s[%v]", tfResource.Type, tfResource.Name, index)
+							}
+						}
 					}
 
 					// Copy the attributes value to attributes_std
 					tfResource.AttributesStd = tfResource.Attributes
+
+					if tfResource.Address == "" {
+						tfResource.Address = fmt.Sprintf("%s.%s", tfResource.Type, tfResource.Name)
+					}
 
 					d.StreamListItem(ctx, tfResource)
 				}
