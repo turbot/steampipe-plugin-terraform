@@ -62,13 +62,6 @@ func tableTerraformResource(ctx context.Context) *plugin.Table {
 				Type:        proto.ColumnType_JSON,
 			},
 
-			// TODO: Remove
-			// {
-			// 	Name:        "instances",
-			// 	Description: "The attributes of the resource.",
-			// 	Type:        proto.ColumnType_JSON,
-			// },
-
 			// Meta-arguments
 			{
 				Name:        "count",
@@ -139,10 +132,8 @@ type terraformResource struct {
 	CountSrc string
 	ForEach  string
 	// A resource's provider arg will always reference a provider block
-	Provider  string
-	Lifecycle map[string]interface{}
-	// TODO: Remove
-	// Instances  map[string]interface{}
+	Provider      string
+	Lifecycle     map[string]interface{}
 	Attributes    interface{}
 	AttributesStd interface{}
 	Address       string
@@ -289,7 +280,6 @@ func buildResource(ctx context.Context, isTFFilePath bool, content []byte, path 
 	tfResource.Name = name
 	tfResource.Arguments = make(map[string]interface{})
 	tfResource.Lifecycle = make(map[string]interface{})
-	// tfResource.Instances = make(map[string]interface{}) // TODO: Remove
 
 	// Remove all "_kics" arguments
 	sanitizeDocument(d)
@@ -395,20 +385,7 @@ func buildResource(ctx context.Context, isTFFilePath bool, content []byte, path 
 			}
 			tfResource.DependsOn = s
 
-		// TODO: Remove as the instances only comes from the terraform state files
-		// Use the 'attributes' column instead to get the attribute details
-
 		case "instances":
-		// 	if reflect.TypeOf(v).String() != "[]interface {}" {
-		// 		return tfResource, fmt.Errorf("The 'instances' argument for resource '%s' must be of type list", name)
-		// 	}
-		// 	for _, v := range v.([]interface{}) {
-		// 		convertedValue := convertModelDocumentToMapInterface(v)
-		// 		cleanedValue := removeKicsLabels(convertedValue).(map[string]interface{})
-		// 		for property, value := range cleanedValue {
-		// 			tfResource.Instances[property] = value
-		// 		}
-		// 	}
 
 		// It's safe to add any remaining arguments since we've already removed all "_kics" arguments
 		default:
