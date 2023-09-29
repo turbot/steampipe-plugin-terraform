@@ -53,12 +53,12 @@ func tableTerraformResource(ctx context.Context) *plugin.Table {
 			},
 			{
 				Name:        "attributes",
-				Description: "Resource configuration attributes. The value will populate only for the resources comes from a state file.",
+				Description: "Resource attributes. The value will populate only for the resources that come from a state file.",
 				Type:        proto.ColumnType_JSON,
 			},
 			{
 				Name:        "attributes_std",
-				Description: "Resource configuration attributes. Contains the value from either the arguments or the attributes property.",
+				Description: "Resource attributes. Contains the value from either the arguments or the attributes property.",
 				Type:        proto.ColumnType_JSON,
 			},
 
@@ -249,6 +249,7 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 							tfResource.Attributes = cleanedValue[property]
 						}
 
+						// Append the index for unique identification of resources that have been created using "count" or "for_each"
 						if property == "index_key" {
 							if index, ok := cleanedValue[property].(float64); ok {
 								tfResource.Address = fmt.Sprintf("%s.%s[%v]", tfResource.Type, tfResource.Name, index)
@@ -259,6 +260,8 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 					// Copy the attributes value to attributes_std
 					tfResource.AttributesStd = tfResource.Attributes
 
+					// If the address is empty (resource from terraform config, i.e. .tf files and the terraform plan files)
+					// Form the address string appending the resource type and resource name
 					if tfResource.Address == "" {
 						tfResource.Address = fmt.Sprintf("%s.%s", tfResource.Type, tfResource.Name)
 					}
@@ -392,6 +395,12 @@ func buildResource(ctx context.Context, isTFFilePath bool, content []byte, path 
 			tfResource.Arguments[k] = v
 		}
 	}
+
+	// Set the arguments as null, if no value (for terraform state files)
+	if len(tfResource.Arguments) == 0 {
+		tfResource.Arguments = nil
+	}
+
 	return tfResource, nil
 }
 
