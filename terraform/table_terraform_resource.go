@@ -43,7 +43,7 @@ func tableTerraformResource(ctx context.Context) *plugin.Table {
 			},
 			{
 				Name:        "address",
-				Description: "TODO",
+				Description: "The absolute resource address.",
 				Type:        proto.ColumnType_STRING,
 			},
 			{
@@ -53,12 +53,12 @@ func tableTerraformResource(ctx context.Context) *plugin.Table {
 			},
 			{
 				Name:        "attributes",
-				Description: "TODO",
+				Description: "Resource configuration attributes. The value will populate only for the resources comes from a state file.",
 				Type:        proto.ColumnType_JSON,
 			},
 			{
 				Name:        "attributes_std",
-				Description: "TODO",
+				Description: "Resource configuration attributes. Contains the value from either the arguments or the attributes property.",
 				Type:        proto.ColumnType_JSON,
 			},
 
