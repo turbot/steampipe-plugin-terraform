@@ -12,6 +12,7 @@ import (
 	"github.com/Checkmarx/kics/pkg/model"
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
 )
 
 func tableTerraformModule(_ context.Context) *plugin.Table {
@@ -43,6 +44,7 @@ func tableTerraformModule(_ context.Context) *plugin.Table {
 				Name:        "arguments",
 				Description: "Input arguments passed to this module.",
 				Type:        proto.ColumnType_JSON,
+				Transform:   transform.FromField("Arguments").Transform(NullIfEmptyMap),
 			},
 			{
 				Name:        "count",

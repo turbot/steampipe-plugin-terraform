@@ -9,6 +9,7 @@ import (
 	"github.com/Checkmarx/kics/pkg/model"
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
 	"github.com/zclconf/go-cty/cty/gocty"
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
@@ -37,6 +38,7 @@ func tableTerraformDataSource(ctx context.Context) *plugin.Table {
 				Name:        "arguments",
 				Description: "Data source arguments.",
 				Type:        proto.ColumnType_JSON,
+				Transform:   transform.FromField("Arguments").Transform(NullIfEmptyMap),
 			},
 			{
 				Name:        "count",

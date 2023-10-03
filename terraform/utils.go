@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 
 	filehelpers "github.com/turbot/go-kit/files"
@@ -371,12 +373,18 @@ func isTerraformPlan(content []byte) bool {
 
 // findBlockLinesFromJSON locates the start and end lines of a specific block or nested element within a block.
 // The file should contain structured data (e.g., JSON) and this function expects to search for blocks with specific names.
-func findBlockLinesFromJSON(file *os.File, blockName string, pathName ...string) (int, int, string) {
+func findBlockLinesFromJSON(ctx context.Context, path string, blockName string, pathName ...string) (int, int, string, error) {
 	var currentLine, startLine, endLine int
 	var bracketCounter, startCounter int
 
 	// These boolean flags indicate which part of the structured data we're currently processing.
 	inBlock, inOutput, inTargetBlock := false, false, false
+
+	file, err := os.Open(path)
+	if err != nil {
+		plugin.Logger(ctx).Error("findBlockLinesFromJSON", "file_error", err)
+		return startLine, endLine, "", err
+	}
 
 	// Move the file pointer to the start of the file.
 	_, _ = file.Seek(0, 0)
@@ -410,6 +418,34 @@ func findBlockLinesFromJSON(file *os.File, blockName string, pathName ...string)
 				bracketCounter--
 			}
 
+			// Get the start line info for the plan file data
+			// For terraform plan we need a special handling since
+			// if we use the count or for_each, in that case the resource configurations in the terraform plan can have more than 1 resource object with same name and type.
+			// So, to avoid the conflict use address and type instead which is unique and only applicable for terraform plan file.
+			if inBlock && strings.Contains(trimmedLine, fmt.Sprintf(`"address": "%s"`, pathName[0])) {
+				peekCounter := 1
+				nameFound := false
+
+				for {
+					peekLine, _ := readLineN(file, currentLine+peekCounter)
+					if strings.Contains(peekLine, fmt.Sprintf(`"type": "%s"`, pathName[1])) {
+						nameFound = true
+						break
+					}
+					if strings.Contains(peekLine, "}") {
+						break
+					}
+					peekCounter++
+				}
+
+				if nameFound {
+					inTargetBlock = true
+					startLine = startCounter // Assume the opening brace is at the start of this resource
+				}
+			}
+
+			// Get the start line info from terraform state file.
+			// Match the type and name of the resource to get the start position
 			if inBlock && strings.Contains(trimmedLine, fmt.Sprintf(`"type": "%s"`, pathName[0])) {
 				peekCounter := 1
 				nameFound := false
@@ -456,7 +492,61 @@ func findBlockLinesFromJSON(file *os.File, blockName string, pathName ...string)
 		startLine = 0
 	}
 
-	return startLine, endLine, source
+	// By default (when created), the file content is not properly formatted with indentation and all the content remains in line 1
+	if file != nil && startLine == 0 && endLine == 0 {
+		// Set the start line as 1, and
+		// end line as the current line (i.e. total lines)
+		startLine = 1
+		endLine = currentLine
+
+		content, err := os.ReadFile(path)
+		if err != nil {
+			plugin.Logger(ctx).Error("findBlockLinesFromJSON", "read_file_error", err)
+			return startLine, endLine, source, err
+		}
+		contentStr := string(content)
+
+		// Regex pattern to extract the resources list from the file
+		pattern := `"planned_values":{.*"root_module":{"resources":(.*)}},"resource_changes"`
+
+		// Compile the regular expression
+		re := regexp.MustCompile(pattern)
+
+		// Find the match in the JSON string
+		matches := re.FindStringSubmatch(contentStr)
+
+		// Check if the resources block is present in the plan file content store the resources list
+		var resources []interface{}
+		if len(matches) >= 2 {
+			plannedValues := matches[1]
+			err := json.Unmarshal([]byte(plannedValues), &resources)
+			if err != nil {
+				plugin.Logger(ctx).Error("findBlockLinesFromJSON", "unmarshal_error", err)
+				return startLine, endLine, source, err
+			}
+		}
+
+		// Go through the resources and check for the desired one
+		for _, r := range resources {
+			if strings.Contains(fmt.Sprint(r), pathName[0]) && strings.Contains(fmt.Sprint(r), pathName[1]) {
+				if data, ok := r.(map[string]interface{}); ok {
+					// Marshal the map to JSON
+					jsonBytes, err := json.Marshal(data)
+					if err != nil {
+						plugin.Logger(ctx).Error("findBlockLinesFromJSON", "unmarshal_error", err)
+						return startLine, endLine, source, err
+					}
+
+					// Convert the JSON bytes to a string
+					jsonString := string(jsonBytes)
+					// And, set the value as source
+					source = jsonString
+				}
+			}
+		}
+	}
+
+	return startLine, endLine, source, nil
 }
 
 func getSourceFromFile(file *os.File, startLine int, endLine int) string {
@@ -487,4 +577,14 @@ func readLineN(file *os.File, lineNum int) (string, error) {
 		}
 	}
 	return "", nil
+}
+
+// Transform function to return nil if an empty map
+func NullIfEmptyMap(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	if data, isMap := d.Value.(map[string]interface{}); isMap {
+		if len(data) == 0 {
+			return nil, nil
+		}
+	}
+	return d.Value, nil
 }

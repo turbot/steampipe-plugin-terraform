@@ -12,6 +12,7 @@ import (
 
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
 	"github.com/zclconf/go-cty/cty/gocty"
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
@@ -42,15 +43,27 @@ func tableTerraformResource(ctx context.Context) *plugin.Table {
 				Type:        proto.ColumnType_STRING,
 			},
 			{
+				Name:        "address",
+				Description: "The absolute resource address.",
+				Type:        proto.ColumnType_STRING,
+			},
+			{
 				Name:        "arguments",
 				Description: "Resource arguments.",
 				Type:        proto.ColumnType_JSON,
+				Transform:   transform.FromField("Arguments").Transform(NullIfEmptyMap),
 			},
 			{
-				Name:        "instances",
-				Description: "The attributes of the resource.",
+				Name:        "attributes",
+				Description: "Resource attributes. The value will populate only for the resources that come from a state file.",
 				Type:        proto.ColumnType_JSON,
 			},
+			{
+				Name:        "attributes_std",
+				Description: "Resource attributes. Contains the value from either the arguments or the attributes property.",
+				Type:        proto.ColumnType_JSON,
+			},
+
 			// Meta-arguments
 			{
 				Name:        "count",
@@ -76,6 +89,7 @@ func tableTerraformResource(ctx context.Context) *plugin.Table {
 				Name:        "lifecycle",
 				Description: "The lifecycle meta-argument is a nested block that can appear within a resource block.",
 				Type:        proto.ColumnType_JSON,
+				Transform:   transform.FromField("Lifecycle").Transform(NullIfEmptyMap),
 			},
 			{
 				Name:        "provider",
@@ -121,9 +135,11 @@ type terraformResource struct {
 	CountSrc string
 	ForEach  string
 	// A resource's provider arg will always reference a provider block
-	Provider  string
-	Lifecycle map[string]interface{}
-	Instances map[string]interface{}
+	Provider      string
+	Lifecycle     map[string]interface{}
+	Attributes    interface{}
+	AttributesStd interface{}
+	Address       string
 }
 
 func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
@@ -146,8 +162,23 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 
 	var docs []model.Document
 
-	// Check if the file contains TF plan or state
-	if pathInfo.IsTFPlanFilePath || pathInfo.IsTFStateFilePath {
+	if pathInfo.IsTFPlanFilePath {
+		planContent, err := getTerraformPlanContentFromBytes(content)
+		if err != nil {
+			plugin.Logger(ctx).Error("terraform_resource.listResources", "get_plan_content_error", err, "path", path)
+			return nil, err
+		}
+		lookupPath := planContent.PlannedValues.RootModule
+
+		for _, resource := range lookupPath.Resources {
+			tfResource, err := buildTerraformPlanResource(ctx, path, resource)
+			if err != nil {
+				return nil, err
+			}
+
+			d.StreamListItem(ctx, tfResource)
+		}
+	} else if pathInfo.IsTFStateFilePath { // Check if the file contains TF plan or state
 		// Initialize the JSON parser
 		jsonParser := p.Parser{}
 
@@ -189,18 +220,58 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 						plugin.Logger(ctx).Error("terraform_resource.listResources", "build_resource_error", err)
 						return nil, err
 					}
+					// Copy the arguments data into attributes_std
+					tfResource.AttributesStd = tfResource.Arguments
+
+					if tfResource.Address == "" {
+						tfResource.Address = fmt.Sprintf("%s.%s", tfResource.Type, tfResource.Name)
+					}
+
 					d.StreamListItem(ctx, tfResource)
 				}
 			}
 		} else if doc["resources"] != nil { // state file returns resources
 			for _, resource := range doc["resources"].([]interface{}) {
 				resourceData := convertModelDocumentToMapInterface(resource)
-				tfResource, err := buildResource(ctx, pathInfo.IsTFStateFilePath, content, path, resourceData["type"].(string), resourceData["name"].(string), resourceData)
-				if err != nil {
-					plugin.Logger(ctx).Error("terraform_resource.listResources", "build_resource_error", err)
-					return nil, err
+
+				// The property instances contains the configurations of the resource created by terraform
+				// it contains the full configuration, i.e the attributes passed in the config and attributes generated after the resource creation.
+				// The instances attribute can contain more than 1 resource configurations if 'count', 'for_each' or any 'dynamic blocks' has been used.
+				// In that case table should list all the configuration as separate row, as the main intention of the table is to show the terraform configuration per resource.
+				for _, rs := range resourceData["instances"].([]interface{}) {
+					tfResource, err := buildResource(ctx, pathInfo.IsTFStateFilePath, content, path, resourceData["type"].(string), resourceData["name"].(string), resourceData)
+					if err != nil {
+						plugin.Logger(ctx).Error("terraform_resource.listResources", "build_resource_error", err)
+						return nil, err
+					}
+
+					// Extract the value of the 'attributes' property
+					convertedValue := convertModelDocumentToMapInterface(rs)
+					cleanedValue := removeKicsLabels(convertedValue).(map[string]interface{})
+					for property := range cleanedValue {
+						if property == "attributes" {
+							tfResource.Attributes = cleanedValue[property]
+						}
+
+						// Append the index for unique identification of resources that have been created using "count" or "for_each"
+						if property == "index_key" {
+							if index, ok := cleanedValue[property].(float64); ok {
+								tfResource.Address = fmt.Sprintf("%s.%s[%v]", tfResource.Type, tfResource.Name, index)
+							}
+						}
+					}
+
+					// Copy the attributes value to attributes_std
+					tfResource.AttributesStd = tfResource.Attributes
+
+					// If the address is empty (resource from terraform config, i.e. .tf files and the terraform plan files)
+					// Form the address string appending the resource type and resource name
+					if tfResource.Address == "" {
+						tfResource.Address = fmt.Sprintf("%s.%s", tfResource.Type, tfResource.Name)
+					}
+
+					d.StreamListItem(ctx, tfResource)
 				}
-				d.StreamListItem(ctx, tfResource)
 			}
 		}
 	}
@@ -216,18 +287,16 @@ func buildResource(ctx context.Context, isTFFilePath bool, content []byte, path 
 	tfResource.Name = name
 	tfResource.Arguments = make(map[string]interface{})
 	tfResource.Lifecycle = make(map[string]interface{})
-	tfResource.Instances = make(map[string]interface{})
 
 	// Remove all "_kics" arguments
 	sanitizeDocument(d)
 
 	if isTFFilePath {
-		file, err := os.Open(path)
+		startLine, endLine, source, err := findBlockLinesFromJSON(ctx, path, "resources", resourceType, name)
 		if err != nil {
-			plugin.Logger(ctx).Error("terraform_resource.buildResource", "open_file_error", err, "path", path)
-			return tfResource, err
+			return nil, err
 		}
-		startLine, endLine, source := findBlockLinesFromJSON(file, "resources", resourceType, name)
+
 		tfResource.StartLine = startLine
 		tfResource.EndLine = endLine
 		tfResource.Source = source
@@ -242,7 +311,7 @@ func buildResource(ctx context.Context, isTFFilePath bool, content []byte, path 
 		tfResource.Source = source
 		tfResource.EndLine = endPosition.Line
 	}
-	// TODO: Can we return source code as well?
+
 	for k, v := range d {
 		switch k {
 		case "count":
@@ -323,22 +392,13 @@ func buildResource(ctx context.Context, isTFFilePath bool, content []byte, path 
 			tfResource.DependsOn = s
 
 		case "instances":
-			if reflect.TypeOf(v).String() != "[]interface {}" {
-				return tfResource, fmt.Errorf("The 'instances' argument for resource '%s' must be of type list", name)
-			}
-			for _, v := range v.([]interface{}) {
-				convertedValue := convertModelDocumentToMapInterface(v)
-				cleanedValue := removeKicsLabels(convertedValue).(map[string]interface{})
-				for property, value := range cleanedValue {
-					tfResource.Instances[property] = value
-				}
-			}
 
 		// It's safe to add any remaining arguments since we've already removed all "_kics" arguments
 		default:
 			tfResource.Arguments[k] = v
 		}
 	}
+
 	return tfResource, nil
 }
 
