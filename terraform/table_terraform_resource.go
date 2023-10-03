@@ -12,6 +12,7 @@ import (
 
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
 	"github.com/zclconf/go-cty/cty/gocty"
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
@@ -50,6 +51,7 @@ func tableTerraformResource(ctx context.Context) *plugin.Table {
 				Name:        "arguments",
 				Description: "Resource arguments.",
 				Type:        proto.ColumnType_JSON,
+				Transform:   transform.FromField("Arguments").Transform(NullIfEmptyMap),
 			},
 			{
 				Name:        "attributes",
@@ -87,6 +89,7 @@ func tableTerraformResource(ctx context.Context) *plugin.Table {
 				Name:        "lifecycle",
 				Description: "The lifecycle meta-argument is a nested block that can appear within a resource block.",
 				Type:        proto.ColumnType_JSON,
+				Transform:   transform.FromField("Lifecycle").Transform(NullIfEmptyMap),
 			},
 			{
 				Name:        "provider",
@@ -391,11 +394,6 @@ func buildResource(ctx context.Context, isTFFilePath bool, content []byte, path 
 		}
 	}
 
-	// Set the arguments as null, if no value (for terraform state files)
-	if len(tfResource.Arguments) == 0 {
-		tfResource.Arguments = nil
-	}
-
 	return tfResource, nil
 }
 
@@ -429,4 +427,14 @@ func removeKicsLabels(data interface{}) interface{} {
 		return dataList
 	}
 	return data
+}
+
+// Transform function to return nil if an empty map
+func NullIfEmptyMap(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	if data, isMap := d.Value.(map[string]interface{}); isMap {
+		if len(data) == 0 {
+			return nil, nil
+		}
+	}
+	return d.Value, nil
 }

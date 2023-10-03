@@ -9,6 +9,7 @@ import (
 	"github.com/Checkmarx/kics/pkg/model"
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
 )
 
 func tableTerraformProvider(ctx context.Context) *plugin.Table {
@@ -30,6 +31,7 @@ func tableTerraformProvider(ctx context.Context) *plugin.Table {
 				Name:        "arguments",
 				Description: "Provider arguments.",
 				Type:        proto.ColumnType_JSON,
+				Transform:   transform.FromField("Arguments").Transform(NullIfEmptyMap),
 			},
 			{
 				Name:        "alias",
