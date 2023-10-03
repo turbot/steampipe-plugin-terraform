@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 
 	filehelpers "github.com/turbot/go-kit/files"
@@ -576,4 +577,14 @@ func readLineN(file *os.File, lineNum int) (string, error) {
 		}
 	}
 	return "", nil
+}
+
+// Transform function to return nil if an empty map
+func NullIfEmptyMap(_ context.Context, d *transform.TransformData) (interface{}, error) {
+	if data, isMap := d.Value.(map[string]interface{}); isMap {
+		if len(data) == 0 {
+			return nil, nil
+		}
+	}
+	return d.Value, nil
 }

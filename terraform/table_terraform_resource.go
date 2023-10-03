@@ -165,6 +165,7 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 	if pathInfo.IsTFPlanFilePath {
 		planContent, err := getTerraformPlanContentFromBytes(content)
 		if err != nil {
+			plugin.Logger(ctx).Error("terraform_resource.listResources", "get_plan_content_error", err, "path", path)
 			return nil, err
 		}
 		lookupPath := planContent.PlannedValues.RootModule
@@ -431,14 +432,4 @@ func removeKicsLabels(data interface{}) interface{} {
 		return dataList
 	}
 	return data
-}
-
-// Transform function to return nil if an empty map
-func NullIfEmptyMap(_ context.Context, d *transform.TransformData) (interface{}, error) {
-	if data, isMap := d.Value.(map[string]interface{}); isMap {
-		if len(data) == 0 {
-			return nil, nil
-		}
-	}
-	return d.Value, nil
 }
