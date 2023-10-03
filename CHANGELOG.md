@@ -3,12 +3,11 @@
 _Breaking changes_
 
 - Removed `instances` column from `terraform_resource` table. ([#64](https://github.com/turbot/steampipe-plugin-terraform/pull/64))
-- Updated tables having columns `arguments` and `lifecycle` with JSON data to return `nil` if empty instead of `{}`. ([#64](https://github.com/turbot/steampipe-plugin-terraform/pull/64))
+- All `arguments` and `lifecycle` columns now return `null` instead of `{}` if empty.  ([#64](https://github.com/turbot/steampipe-plugin-terraform/pull/64))
 
 _Enhancements_
 
 - Added `address`, `attributes`, and `attributes_std` columns to `terraform_resource` table. ([#64](https://github.com/turbot/steampipe-plugin-terraform/pull/64))
-- Updated: All files are now checked even if a non-existent file name is provided in any `file_paths` config arg. ([#67](https://github.com/turbot/steampipe-plugin-terraform/pull/67))
 
 _Bug fixes_
 
