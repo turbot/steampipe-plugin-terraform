@@ -46,7 +46,11 @@ func buildTerraformPlanResource(ctx context.Context, path string, resource Terra
 	tfResource.Arguments = resource.Values
 	tfResource.AttributesStd = tfResource.Arguments
 
-	startLine, endLine, source := findBlockLinesFromJSON(ctx, path, "resources", resource.Address, resource.Type)
+	startLine, endLine, source, err := findBlockLinesFromJSON(ctx, path, "resources", resource.Address, resource.Type)
+	if err != nil {
+		return nil, err
+	}
+
 	tfResource.StartLine = startLine
 	tfResource.EndLine = endLine
 	tfResource.Source = source

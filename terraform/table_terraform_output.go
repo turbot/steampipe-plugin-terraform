@@ -178,7 +178,11 @@ func buildOutput(ctx context.Context, isTFStateFilePath bool, path string, conte
 	sanitizeDocument(d)
 
 	if isTFStateFilePath {
-		startLine, endLine, source := findBlockLinesFromJSON(ctx, path, "outputs", name)
+		startLine, endLine, source, err := findBlockLinesFromJSON(ctx, path, "outputs", name)
+		if err != nil {
+			return tfOutput, err
+		}
+
 		tfOutput.StartLine = startLine
 		tfOutput.EndLine = endLine
 		tfOutput.Source = source

@@ -291,7 +291,11 @@ func buildResource(ctx context.Context, isTFFilePath bool, content []byte, path 
 	sanitizeDocument(d)
 
 	if isTFFilePath {
-		startLine, endLine, source := findBlockLinesFromJSON(ctx, path, "resources", resourceType, name)
+		startLine, endLine, source, err := findBlockLinesFromJSON(ctx, path, "resources", resourceType, name)
+		if err != nil {
+			return nil, err
+		}
+
 		tfResource.StartLine = startLine
 		tfResource.EndLine = endLine
 		tfResource.Source = source

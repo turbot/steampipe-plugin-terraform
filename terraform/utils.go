@@ -372,17 +372,18 @@ func isTerraformPlan(content []byte) bool {
 
 // findBlockLinesFromJSON locates the start and end lines of a specific block or nested element within a block.
 // The file should contain structured data (e.g., JSON) and this function expects to search for blocks with specific names.
-func findBlockLinesFromJSON(ctx context.Context, path string, blockName string, pathName ...string) (int, int, string) {
-	file, err := os.Open(path)
-	if err != nil {
-		panic(err)
-	}
-
+func findBlockLinesFromJSON(ctx context.Context, path string, blockName string, pathName ...string) (int, int, string, error) {
 	var currentLine, startLine, endLine int
 	var bracketCounter, startCounter int
 
 	// These boolean flags indicate which part of the structured data we're currently processing.
 	inBlock, inOutput, inTargetBlock := false, false, false
+
+	file, err := os.Open(path)
+	if err != nil {
+		plugin.Logger(ctx).Error("findBlockLinesFromJSON", "file_error", err)
+		return startLine, endLine, "", err
+	}
 
 	// Move the file pointer to the start of the file.
 	_, _ = file.Seek(0, 0)
@@ -497,7 +498,11 @@ func findBlockLinesFromJSON(ctx context.Context, path string, blockName string, 
 		startLine = 1
 		endLine = currentLine
 
-		content, _ := os.ReadFile(path)
+		content, err := os.ReadFile(path)
+		if err != nil {
+			plugin.Logger(ctx).Error("findBlockLinesFromJSON", "read_file_error", err)
+			return startLine, endLine, source, err
+		}
 		contentStr := string(content)
 
 		// Regex pattern to extract the resources list from the file
@@ -516,7 +521,7 @@ func findBlockLinesFromJSON(ctx context.Context, path string, blockName string, 
 			err := json.Unmarshal([]byte(plannedValues), &resources)
 			if err != nil {
 				plugin.Logger(ctx).Error("findBlockLinesFromJSON", "unmarshal_error", err)
-				return startLine, endLine, source
+				return startLine, endLine, source, err
 			}
 		}
 
@@ -527,7 +532,8 @@ func findBlockLinesFromJSON(ctx context.Context, path string, blockName string, 
 					// Marshal the map to JSON
 					jsonBytes, err := json.Marshal(data)
 					if err != nil {
-						panic(err)
+						plugin.Logger(ctx).Error("findBlockLinesFromJSON", "unmarshal_error", err)
+						return startLine, endLine, source, err
 					}
 
 					// Convert the JSON bytes to a string
@@ -539,7 +545,7 @@ func findBlockLinesFromJSON(ctx context.Context, path string, blockName string, 
 		}
 	}
 
-	return startLine, endLine, source
+	return startLine, endLine, source, nil
 }
 
 func getSourceFromFile(file *os.File, startLine int, endLine int) string {
