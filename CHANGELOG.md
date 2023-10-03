@@ -1,3 +1,24 @@
+## v0.10.0 [2023-10-03]
+
+_Breaking changes_
+
+- Removed `instances` column from `terraform_resource` table. ([#64](https://github.com/turbot/steampipe-plugin-terraform/pull/64))
+- Updated tables having columns `arguments` and `lifecycle` with JSON data to return `nil` if empty instead of `{}`. ([#64](https://github.com/turbot/steampipe-plugin-terraform/pull/64))
+
+_Enhancements_
+
+- Added `address`, `attributes`, and `attributes_std` columns to `terraform_resource` table. ([#64](https://github.com/turbot/steampipe-plugin-terraform/pull/64))
+- Updated: All files are now checked even if a non-existent file name is provided in any `file_paths` config arg. ([#67](https://github.com/turbot/steampipe-plugin-terraform/pull/67))
+
+_Bug fixes_
+
+- Fixed the `start_line`, `end_line` and `source` column values in the `terraform_resource` table to return correct values regardless of file indentation. ([#64](https://github.com/turbot/steampipe-plugin-terraform/pull/64))
+- Fixed the plugin to check all files even if a non-existent file name is provided in any `file_paths` config arg. ([#67](https://github.com/turbot/steampipe-plugin-terraform/pull/67))
+
+_Dependencies_
+
+- Recompiled plugin with [steampipe-plugin-sdk v5.6.2](https://github.com/turbot/steampipe-plugin-sdk/blob/main/CHANGELOG.md#v562-2023-10-03) which prevents nil pointer reference errors for implicit hydrate configs. ([#63](https://github.com/turbot/steampipe-plugin-terraform/pull/63))
+
 ## v0.9.0 [2023-10-02]
 
 _Dependencies_
