@@ -83,7 +83,7 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 
 			// If the specified path is unavailable, then an empty row should populate
 			if strings.Contains(err.Error(), "failed to get directory specified by the source") {
-				return nil, nil
+				continue
 			}
 			return nil, err
 		}
@@ -112,7 +112,7 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 
 			// If the specified path is unavailable, then an empty row should populate
 			if strings.Contains(err.Error(), "failed to get directory specified by the source") {
-				return nil, nil
+				continue
 			}
 			return nil, err
 		}
@@ -144,7 +144,7 @@ func tfConfigList(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateDat
 
 			// If the specified path is unavailable, then an empty row should populate
 			if strings.Contains(err.Error(), "failed to get directory specified by the source") {
-				return nil, nil
+				continue
 			}
 			return nil, err
 		}
