@@ -178,12 +178,7 @@ func buildOutput(ctx context.Context, isTFStateFilePath bool, path string, conte
 	sanitizeDocument(d)
 
 	if isTFStateFilePath {
-		file, err := os.Open(path)
-		if err != nil {
-			plugin.Logger(ctx).Error("terraform_output.listOutputs", "open_file_error", err, "path", path)
-			return tfOutput, err
-		}
-		startLine, endLine, source := findBlockLinesFromJSON(file, "outputs", name)
+		startLine, endLine, source := findBlockLinesFromJSON(ctx, path, "outputs", name)
 		tfOutput.StartLine = startLine
 		tfOutput.EndLine = endLine
 		tfOutput.Source = source

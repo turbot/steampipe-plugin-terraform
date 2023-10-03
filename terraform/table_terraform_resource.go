@@ -167,7 +167,7 @@ func listResources(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 		lookupPath := planContent.PlannedValues.RootModule
 
 		for _, resource := range lookupPath.Resources {
-			tfResource, err := buildTerraformPlanResource(path, resource)
+			tfResource, err := buildTerraformPlanResource(ctx, path, resource)
 			if err != nil {
 				return nil, err
 			}
@@ -288,12 +288,7 @@ func buildResource(ctx context.Context, isTFFilePath bool, content []byte, path 
 	sanitizeDocument(d)
 
 	if isTFFilePath {
-		file, err := os.Open(path)
-		if err != nil {
-			plugin.Logger(ctx).Error("terraform_resource.buildResource", "open_file_error", err, "path", path)
-			return tfResource, err
-		}
-		startLine, endLine, source := findBlockLinesFromJSON(file, "resources", resourceType, name)
+		startLine, endLine, source := findBlockLinesFromJSON(ctx, path, "resources", resourceType, name)
 		tfResource.StartLine = startLine
 		tfResource.EndLine = endLine
 		tfResource.Source = source

@@ -1,9 +1,9 @@
 package terraform
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 )
 
 type TerraformPlanResource struct {
@@ -35,7 +35,7 @@ func getTerraformPlanContentFromBytes(rawContent []byte) (*TerraformPlanContentS
 	return planContent, nil
 }
 
-func buildTerraformPlanResource(path string, resource TerraformPlanResource) (*terraformResource, error) {
+func buildTerraformPlanResource(ctx context.Context, path string, resource TerraformPlanResource) (*terraformResource, error) {
 	tfResource := new(terraformResource)
 
 	tfResource.Path = path
@@ -46,11 +46,7 @@ func buildTerraformPlanResource(path string, resource TerraformPlanResource) (*t
 	tfResource.Arguments = resource.Values
 	tfResource.AttributesStd = tfResource.Arguments
 
-	file, err := os.Open(path)
-	if err != nil {
-		return tfResource, err
-	}
-	startLine, endLine, source := findBlockLinesFromJSON(file, "resources", resource.Address, resource.Type)
+	startLine, endLine, source := findBlockLinesFromJSON(ctx, path, "resources", resource.Address, resource.Type)
 	tfResource.StartLine = startLine
 	tfResource.EndLine = endLine
 	tfResource.Source = source

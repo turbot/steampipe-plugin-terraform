@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -371,7 +372,12 @@ func isTerraformPlan(content []byte) bool {
 
 // findBlockLinesFromJSON locates the start and end lines of a specific block or nested element within a block.
 // The file should contain structured data (e.g., JSON) and this function expects to search for blocks with specific names.
-func findBlockLinesFromJSON(file *os.File, blockName string, pathName ...string) (int, int, string) {
+func findBlockLinesFromJSON(ctx context.Context, path string, blockName string, pathName ...string) (int, int, string) {
+	file, err := os.Open(path)
+	if err != nil {
+		panic(err)
+	}
+
 	var currentLine, startLine, endLine int
 	var bracketCounter, startCounter int
 
@@ -482,6 +488,55 @@ func findBlockLinesFromJSON(file *os.File, blockName string, pathName ...string)
 	if startLine != 0 && endLine == 0 {
 		// If we found the start but not the end, reset the start to indicate the block doesn't exist in entirety.
 		startLine = 0
+	}
+
+	// By default (when created), the file content is not properly formatted with indentation and all the content remains in line 1
+	if file != nil && startLine == 0 && endLine == 0 {
+		// Set the start line as 1, and
+		// end line as the current line (i.e. total lines)
+		startLine = 1
+		endLine = currentLine
+
+		content, _ := os.ReadFile(path)
+		contentStr := string(content)
+
+		// Regex pattern to extract the resources list from the file
+		pattern := `"planned_values":{.*"root_module":{"resources":(.*)}},"resource_changes"`
+
+		// Compile the regular expression
+		re := regexp.MustCompile(pattern)
+
+		// Find the match in the JSON string
+		matches := re.FindStringSubmatch(contentStr)
+
+		// Check if the resources block is present in the plan file content store the resources list
+		var resources []interface{}
+		if len(matches) >= 2 {
+			plannedValues := matches[1]
+			err := json.Unmarshal([]byte(plannedValues), &resources)
+			if err != nil {
+				plugin.Logger(ctx).Error("findBlockLinesFromJSON", "unmarshal_error", err)
+				return startLine, endLine, source
+			}
+		}
+
+		// Go through the resources and check for the desired one
+		for _, r := range resources {
+			if strings.Contains(fmt.Sprint(r), pathName[0]) && strings.Contains(fmt.Sprint(r), pathName[1]) {
+				if data, ok := r.(map[string]interface{}); ok {
+					// Marshal the map to JSON
+					jsonBytes, err := json.Marshal(data)
+					if err != nil {
+						panic(err)
+					}
+
+					// Convert the JSON bytes to a string
+					jsonString := string(jsonBytes)
+					// And, set the value as source
+					source = jsonString
+				}
+			}
+		}
 	}
 
 	return startLine, endLine, source
