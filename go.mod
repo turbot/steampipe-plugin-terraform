@@ -7,7 +7,7 @@ require (
 	github.com/hashicorp/hcl/v2 v2.18.0
 	github.com/turbot/go-kit v0.8.0-rc.0
 	github.com/turbot/steampipe-plugin-sdk/v5 v5.6.2
-	github.com/zclconf/go-cty v1.14.0
+	github.com/zclconf/go-cty v1.14.1
 )
 
 require (
