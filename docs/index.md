@@ -8,6 +8,7 @@ short_name: "terraform"
 description: "Steampipe plugin to query data from Terraform files."
 og_description: "Query Terraform files with SQL! Open source CLI. No DB required."
 og_image: "/images/plugins/turbot/terraform-social-graphic.png"
+engines: ["steampipe", "sqlite", "postgres", "export"]
 ---
 
 # Terraform + Steampipe
