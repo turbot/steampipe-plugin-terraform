@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/Checkmarx/kics v1.4.9
 	github.com/hashicorp/hcl/v2 v2.19.1
-	github.com/turbot/go-kit v0.9.0-rc.1
+	github.com/turbot/go-kit v0.9.0-rc.3
 	github.com/turbot/steampipe-plugin-sdk/v5 v5.8.0
 	github.com/zclconf/go-cty v1.14.1
 )
@@ -37,7 +37,7 @@ require (
 	github.com/eko/gocache/store/bigcache/v4 v4.2.1 // indirect
 	github.com/eko/gocache/store/ristretto/v4 v4.2.1 // indirect
 	github.com/fatih/color v1.15.0 // indirect
-	github.com/fsnotify/fsnotify v1.6.0 // indirect
+	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/gertd/go-pluralize v0.2.1 // indirect
 	github.com/getsentry/sentry-go v0.11.0 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
