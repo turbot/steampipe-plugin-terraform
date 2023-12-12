@@ -1,3 +1,9 @@
+## v0.11.2 [2023-12-12]
+
+_Bug fixes_
+
+- Fix the missing optional tag on the plugin's connection config arguments. [#84](https://github.com/turbot/steampipe-plugin-terraform/pull/84)
+
 ## v0.11.1 [2023-12-12]
 
 _Bug fixes_
