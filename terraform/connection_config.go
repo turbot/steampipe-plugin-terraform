@@ -2,7 +2,6 @@ package terraform
 
 import (
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
-	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/schema"
 )
 
 type terraformConfig struct {
@@ -10,25 +9,6 @@ type terraformConfig struct {
 	Paths                  []string `cty:"paths" steampipe:"watch"`
 	PlanFilePaths          []string `cty:"plan_file_paths" steampipe:"watch"`
 	StateFilePaths         []string `cty:"state_file_paths" steampipe:"watch"`
-}
-
-var ConfigSchema = map[string]*schema.Attribute{
-	"configuration_file_paths": {
-		Type: schema.TypeList,
-		Elem: &schema.Attribute{Type: schema.TypeString},
-	},
-	"paths": {
-		Type: schema.TypeList,
-		Elem: &schema.Attribute{Type: schema.TypeString},
-	},
-	"plan_file_paths": {
-		Type: schema.TypeList,
-		Elem: &schema.Attribute{Type: schema.TypeString},
-	},
-	"state_file_paths": {
-		Type: schema.TypeList,
-		Elem: &schema.Attribute{Type: schema.TypeString},
-	},
 }
 
 func ConfigInstance() interface{} {
