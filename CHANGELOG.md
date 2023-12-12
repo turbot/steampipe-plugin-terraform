@@ -1,3 +1,9 @@
+## v0.11.1 [2023-12-12]
+
+_Bug fixes_
+
+- Fixed the plugin's connection config variables to use the `hcl` syntax. ([#82](https://github.com/turbot/steampipe-plugin-terraform/pull/82))
+
 ## v0.11.0 [2023-12-12]
 
 _What's new?_
