@@ -5,10 +5,10 @@ import (
 )
 
 type terraformConfig struct {
-	ConfigurationFilePaths []string `hcl:"configuration_file_paths" steampipe:"watch"`
-	Paths                  []string `hcl:"paths" steampipe:"watch"`
-	PlanFilePaths          []string `hcl:"plan_file_paths" steampipe:"watch"`
-	StateFilePaths         []string `hcl:"state_file_paths" steampipe:"watch"`
+	ConfigurationFilePaths []string `hcl:"configuration_file_paths,optional" steampipe:"watch"`
+	Paths                  []string `hcl:"paths,optional" steampipe:"watch"`
+	PlanFilePaths          []string `hcl:"plan_file_paths,optional" steampipe:"watch"`
+	StateFilePaths         []string `hcl:"state_file_paths,optional" steampipe:"watch"`
 }
 
 func ConfigInstance() interface{} {
