@@ -233,11 +233,23 @@ func buildVariable(ctx context.Context, isTFStateFilePath bool, path string, con
 			}
 
 		case "type":
-			tfVar.Type = v.(string)
+
+			tfVar.Type = formatVariableTypeString(v.(string))
 
 		}
 	}
 	return tfVar, nil
+}
+
+// Cleanup the value for the variable type
+// formatString uses regex to remove "${" and "}" from the input string.
+func formatVariableTypeString(input string) string {
+	re := regexp.MustCompile(`^\$\{(.+)\}$`)
+	matches := re.FindStringSubmatch(input)
+	if len(matches) > 1 {
+		return matches[1]
+	}
+	return ""
 }
 
 func extractValidationBlock(tfVar string) (string, error) {
