@@ -14,7 +14,6 @@ The `terraform_variable` table provides insights into the variables defined in y
 ## Examples
 
 ### Basic Info
-
 Explore the key details of your Terraform configuration variables. This can help you understand the values and paths associated with different elements of your configuration, and can be useful in troubleshooting or optimizing your setup.
 
 ```sql+postgres
@@ -40,7 +39,6 @@ from
 ```
 
 ### List Variables with Validation Rules
-
 Identify the variables that have validation rules applied. This is useful for ensuring that the constraints on variable values are properly understood and managed.
 
 ```sql+postgres
@@ -66,7 +64,6 @@ where
 ```
 
 ### Sensitive Variables
-
 Discover which variables in your Terraform configuration are marked as sensitive. This is useful for maintaining data security and confidentiality.
 
 ```sql+postgres
