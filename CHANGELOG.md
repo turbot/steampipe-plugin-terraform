@@ -16,7 +16,7 @@ _Bug fixes_
 
 _Dependencies_
 
-- Recompiled plugin with [steampipe-plugin-sdk v5.10.1](https://github.com/turbot/steampipe-plugin-sdk/blob/main/CHANGELOG.md#v5100-2024-04-10) that adds support for connection key columns.
+- Recompiled plugin with [steampipe-plugin-sdk v5.10.1](https://github.com/turbot/steampipe-plugin-sdk/blob/main/CHANGELOG.md#v5100-2024-04-10) that adds support for connection key columns. ([#92](https://github.com/turbot/steampipe-plugin-terraform/pull/92))
 
 ## v0.11.2 [2023-12-12]
 
