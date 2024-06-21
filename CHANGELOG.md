@@ -1,3 +1,23 @@
+## v0.12.0 [2024-06-21]
+
+_What's new?_
+
+- New tables added
+  - [terraform_variable](https://hub.steampipe.io/plugins/turbot/terraform/tables/terraform_variable) ([#97](https://github.com/turbot/steampipe-plugin-terraform/pull/97))
+
+_Enhancements_
+
+- The Plugin and the Steampipe Anywhere binaries are now built with the `netgo` package. ([#101](https://github.com/turbot/steampipe-plugin-terraform/pull/101))
+- Added the `version` flag to the plugin's Export tool. ([#65](https://github.com/turbot/steampipe-export/pull/65))
+
+_Bug fixes_
+
+- Fixed the `arguments` column of `terraform_resource` table to correctly return the `type` field. ([#99](https://github.com/turbot/steampipe-plugin-terraform/pull/99)) ([#92](https://github.com/turbot/steampipe-plugin-terraform/pull/92))
+
+_Dependencies_
+
+- Recompiled plugin with [steampipe-plugin-sdk v5.10.1](https://github.com/turbot/steampipe-plugin-sdk/blob/main/CHANGELOG.md#v5100-2024-04-10) that adds support for connection key columns.
+
 ## v0.11.2 [2023-12-12]
 
 _Bug fixes_
