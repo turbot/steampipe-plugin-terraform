@@ -233,7 +233,6 @@ func buildVariable(ctx context.Context, isTFStateFilePath bool, path string, con
 			}
 
 		case "type":
-
 			tfVar.Type = formatVariableTypeString(v.(string))
 
 		}
