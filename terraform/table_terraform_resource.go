@@ -352,6 +352,7 @@ func buildResource(ctx context.Context, isTFFilePath bool, content []byte, path 
 			if reflect.TypeOf(v).String() != "string" {
 				return tfResource, fmt.Errorf("The 'type' argument for resource '%s' must be of type string", name)
 			}
+			tfResource.Arguments["type"] = v
 			if tfResource.Name == "" {
 				tfResource.Type = v.(string)
 			}
