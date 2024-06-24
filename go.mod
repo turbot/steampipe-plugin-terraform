@@ -6,7 +6,7 @@ toolchain go1.21.1
 
 require (
 	github.com/Checkmarx/kics v1.4.9
-	github.com/hashicorp/hcl/v2 v2.20.1
+	github.com/hashicorp/hcl/v2 v2.21.0
 	github.com/turbot/go-kit v0.10.0-rc.0
 	github.com/turbot/steampipe-plugin-sdk/v5 v5.10.1
 	github.com/zclconf/go-cty v1.14.4
