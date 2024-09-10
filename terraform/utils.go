@@ -256,7 +256,9 @@ func ParseContent(ctx context.Context, d *plugin.QueryData, path string, content
 	parseMutex.Lock()
 	defer parseMutex.Unlock()
 
-	parsedDocs, err := p.Parse(path, content)
+	// jsonParser := p.Parser{}
+
+	parsedDocs, err := p.Parse(path, content, false, false)
 	if err != nil {
 		plugin.Logger(ctx).Error("utils.ParseContent", "parse_error", err, "path", path)
 		return parser.ParsedDocument{}, err
