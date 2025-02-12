@@ -1,3 +1,18 @@
+## v1.0.1 [2025-02-12]
+
+_Bug fixes_
+
+- Fixed the `terraform_resource` table to correctly return data instead of `index out of range` error when the `state_file_paths` config argument is set in the `terraform.spc` file. ([#109](https://github.com/turbot/steampipe-plugin-terraform/pull/109))
+
+## v1.0.0 [2024-10-22]
+
+There are no significant changes in this plugin version; it has been released to align with [Steampipe's v1.0.0](https://steampipe.io/changelog/steampipe-cli-v1-0-0) release. This plugin adheres to [semantic versioning](https://semver.org/#semantic-versioning-specification-semver), ensuring backward compatibility within each major version.
+
+_Dependencies_
+
+- Recompiled plugin with Go version `1.22`. ([#107](https://github.com/turbot/steampipe-plugin-terraform/pull/107))
+- Recompiled plugin with [steampipe-plugin-sdk v5.10.4](https://github.com/turbot/steampipe-plugin-sdk/blob/develop/CHANGELOG.md#v5104-2024-08-29) that fixes logging in the plugin export tool. ([#107](https://github.com/turbot/steampipe-plugin-terraform/pull/107))
+
 ## v0.12.0 [2024-06-21]
 
 _What's new?_
