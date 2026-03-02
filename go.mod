@@ -1,15 +1,13 @@
 module github.com/turbot/steampipe-plugin-terraform
 
-go 1.24
-
-toolchain go1.24.1
+go 1.25
 
 require (
 	github.com/Checkmarx/kics v1.7.13
 	github.com/hashicorp/hcl/v2 v2.20.1
 	github.com/turbot/go-kit v1.1.0
 	github.com/turbot/steampipe-plugin-sdk/v5 v5.13.1
-	github.com/zclconf/go-cty v1.14.4
+	github.com/zclconf/go-cty v1.18.0
 )
 
 require (
