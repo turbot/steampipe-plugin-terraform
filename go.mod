@@ -7,7 +7,7 @@ require (
 	github.com/hashicorp/hcl/v2 v2.20.1
 	github.com/turbot/go-kit v1.1.0
 	github.com/turbot/steampipe-plugin-sdk/v5 v5.14.0
-	github.com/zclconf/go-cty v1.14.4
+	github.com/zclconf/go-cty v1.19.0
 )
 
 require (
@@ -22,6 +22,7 @@ require (
 	github.com/alexmullins/zip v0.0.0-20180717182244-4affb64b04d0 // indirect
 	github.com/allegro/bigcache/v3 v3.1.0 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
+	github.com/apparentlymart/go-textseg/v17 v17.0.1 // indirect
 	github.com/aws/aws-sdk-go v1.44.295 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
