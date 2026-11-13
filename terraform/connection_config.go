@@ -1,7 +1,7 @@
 package terraform
 
 import (
-	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v6/plugin"
 )
 
 type terraformConfig struct {
@@ -17,9 +17,9 @@ func ConfigInstance() interface{} {
 
 // GetConfig :: retrieve and cast connection config from query data
 func GetConfig(connection *plugin.Connection) terraformConfig {
-	if connection == nil || connection.Config == nil {
+	if connection == nil || connection.GetConfig() == nil {
 		return terraformConfig{}
 	}
-	config, _ := connection.Config.(terraformConfig)
+	config, _ := connection.GetConfig().(terraformConfig)
 	return config
 }

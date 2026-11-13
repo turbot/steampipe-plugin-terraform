@@ -10,9 +10,9 @@ import (
 	"github.com/Checkmarx/kics/pkg/model"
 	p "github.com/Checkmarx/kics/pkg/parser/json"
 
-	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
-	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
-	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
+	"github.com/turbot/steampipe-plugin-sdk/v6/grpc/proto"
+	"github.com/turbot/steampipe-plugin-sdk/v6/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v6/plugin/transform"
 	"github.com/zclconf/go-cty/cty/gocty"
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
@@ -336,13 +336,13 @@ func buildResource(ctx context.Context, isTFFilePath bool, content []byte, path 
 
 		case "provider":
 			if reflect.TypeOf(v).String() != "string" {
-				return tfResource, fmt.Errorf("The 'provider' argument for resource '%s' must be of type string", name)
+				return tfResource, fmt.Errorf("the 'provider' argument for resource '%s' must be of type string", name)
 			}
 			tfResource.Provider = v.(string)
 
 		case "name":
 			if reflect.TypeOf(v).String() != "string" {
-				return tfResource, fmt.Errorf("The 'name' argument for resource '%s' must be of type string", name)
+				return tfResource, fmt.Errorf("the 'name' argument for resource '%s' must be of type string", name)
 			}
 			if tfResource.Name == "" {
 				tfResource.Name = v.(string)
@@ -350,7 +350,7 @@ func buildResource(ctx context.Context, isTFFilePath bool, content []byte, path 
 
 		case "type":
 			if reflect.TypeOf(v).String() != "string" {
-				return tfResource, fmt.Errorf("The 'type' argument for resource '%s' must be of type string", name)
+				return tfResource, fmt.Errorf("the 'type' argument for resource '%s' must be of type string", name)
 			}
 			tfResource.Arguments["type"] = v
 			if tfResource.Name == "" {
@@ -359,7 +359,7 @@ func buildResource(ctx context.Context, isTFFilePath bool, content []byte, path 
 
 		case "mode":
 			if reflect.TypeOf(v).String() != "string" {
-				return tfResource, fmt.Errorf("The 'mode' argument for resource '%s' must be of type string", name)
+				return tfResource, fmt.Errorf("the 'mode' argument for resource '%s' must be of type string", name)
 			}
 			tfResource.Mode = v.(string)
 
@@ -373,7 +373,7 @@ func buildResource(ctx context.Context, isTFFilePath bool, content []byte, path 
 
 		case "lifecycle":
 			if reflect.TypeOf(v).String() != "model.Document" {
-				return tfResource, fmt.Errorf("The 'lifecycle' argument for resource '%s' must be of type map", name)
+				return tfResource, fmt.Errorf("the 'lifecycle' argument for resource '%s' must be of type map", name)
 			}
 			for k, v := range v.(model.Document) {
 				if !strings.HasPrefix(k, "_kics") {
@@ -383,7 +383,7 @@ func buildResource(ctx context.Context, isTFFilePath bool, content []byte, path 
 
 		case "depends_on":
 			if reflect.TypeOf(v).String() != "[]interface {}" {
-				return tfResource, fmt.Errorf("The 'depends_on' argument for resource '%s' must be of type list", name)
+				return tfResource, fmt.Errorf("the 'depends_on' argument for resource '%s' must be of type list", name)
 			}
 			interfaces := v.([]interface{})
 			s := make([]string, len(interfaces))

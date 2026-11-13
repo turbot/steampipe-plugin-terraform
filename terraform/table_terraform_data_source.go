@@ -7,9 +7,9 @@ import (
 	"reflect"
 
 	"github.com/Checkmarx/kics/pkg/model"
-	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
-	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
-	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
+	"github.com/turbot/steampipe-plugin-sdk/v6/grpc/proto"
+	"github.com/turbot/steampipe-plugin-sdk/v6/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v6/plugin/transform"
 	"github.com/zclconf/go-cty/cty/gocty"
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
@@ -205,7 +205,7 @@ func buildDataSource(ctx context.Context, path string, content []byte, dataSourc
 
 		case "provider":
 			if reflect.TypeOf(v).String() != "string" {
-				return tfDataSource, fmt.Errorf("The 'provider' argument for data source '%s' must be of type string", name)
+				return tfDataSource, fmt.Errorf("the 'provider' argument for data source '%s' must be of type string", name)
 			}
 			tfDataSource.Provider = v.(string)
 
@@ -219,7 +219,7 @@ func buildDataSource(ctx context.Context, path string, content []byte, dataSourc
 
 		case "depends_on":
 			if reflect.TypeOf(v).String() != "[]interface {}" {
-				return tfDataSource, fmt.Errorf("The 'depends_on' argument for data source '%s' must be of type list", name)
+				return tfDataSource, fmt.Errorf("the 'depends_on' argument for data source '%s' must be of type list", name)
 			}
 			interfaces := v.([]interface{})
 			s := make([]string, len(interfaces))

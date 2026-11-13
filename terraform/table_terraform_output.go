@@ -9,8 +9,8 @@ import (
 
 	"github.com/Checkmarx/kics/pkg/model"
 	p "github.com/Checkmarx/kics/pkg/parser/json"
-	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
-	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v6/grpc/proto"
+	"github.com/turbot/steampipe-plugin-sdk/v6/plugin"
 	"github.com/zclconf/go-cty/cty/gocty"
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 )
@@ -200,7 +200,7 @@ func buildOutput(ctx context.Context, isTFStateFilePath bool, path string, conte
 		switch k {
 		case "description":
 			if reflect.TypeOf(v).String() != "string" {
-				return tfOutput, fmt.Errorf("The 'description' argument for output '%s' must be of type string", name)
+				return tfOutput, fmt.Errorf("the 'description' argument for output '%s' must be of type string", name)
 			}
 			tfOutput.Description = v.(string)
 
@@ -218,13 +218,13 @@ func buildOutput(ctx context.Context, isTFStateFilePath bool, path string, conte
 			var sensitiveVal bool
 			err := gocty.FromCtyValue(v.(ctyjson.SimpleJSONValue).Value, &sensitiveVal)
 			if err != nil {
-				return tfOutput, fmt.Errorf("Failed to resolve 'sensitive' argument for output '%s': %w", name, err)
+				return tfOutput, fmt.Errorf("failed to resolve 'sensitive' argument for output '%s': %w", name, err)
 			}
 			tfOutput.Sensitive = sensitiveVal
 
 		case "depends_on":
 			if reflect.TypeOf(v).String() != "[]interface {}" {
-				return tfOutput, fmt.Errorf("The 'depends_on' argument for output '%s' must be of type list", name)
+				return tfOutput, fmt.Errorf("the 'depends_on' argument for output '%s' must be of type list", name)
 			}
 			interfaces := v.([]interface{})
 			s := make([]string, len(interfaces))
