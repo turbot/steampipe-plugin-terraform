@@ -7,9 +7,9 @@ import (
 	"reflect"
 
 	"github.com/Checkmarx/kics/pkg/model"
-	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
-	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
-	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
+	"github.com/turbot/steampipe-plugin-sdk/v6/grpc/proto"
+	"github.com/turbot/steampipe-plugin-sdk/v6/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v6/plugin/transform"
 )
 
 func tableTerraformProvider(ctx context.Context) *plugin.Table {
@@ -141,7 +141,7 @@ func listProviders(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDa
 
 					default:
 						plugin.Logger(ctx).Error("terraform_provider.listProviders", "unknown_type", providerType)
-						return nil, fmt.Errorf("Failed to list providers due to unknown type for provider %s", providerName)
+						return nil, fmt.Errorf("failed to list providers due to unknown type for provider %s", providerName)
 					}
 
 				}
@@ -174,13 +174,13 @@ func buildProvider(ctx context.Context, path string, content []byte, name string
 		switch k {
 		case "alias":
 			if reflect.TypeOf(v).String() != "string" {
-				return tfProvider, fmt.Errorf("The 'alias' argument for provider '%s' must be of type string", name)
+				return tfProvider, fmt.Errorf("the 'alias' argument for provider '%s' must be of type string", name)
 			}
 			tfProvider.Alias = v.(string)
 
 		case "version":
 			if reflect.TypeOf(v).String() != "string" {
-				return tfProvider, fmt.Errorf("The 'version' argument for provider '%s' must be of type string", name)
+				return tfProvider, fmt.Errorf("the 'version' argument for provider '%s' must be of type string", name)
 			}
 			tfProvider.Version = v.(string)
 

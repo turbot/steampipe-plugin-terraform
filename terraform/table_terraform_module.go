@@ -10,9 +10,9 @@ import (
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 
 	"github.com/Checkmarx/kics/pkg/model"
-	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
-	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
-	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
+	"github.com/turbot/steampipe-plugin-sdk/v6/grpc/proto"
+	"github.com/turbot/steampipe-plugin-sdk/v6/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v6/plugin/transform"
 )
 
 func tableTerraformModule(_ context.Context) *plugin.Table {
@@ -186,13 +186,13 @@ func buildModule(ctx context.Context, path string, content []byte, name string, 
 		switch k {
 		case "source":
 			if reflect.TypeOf(v).String() != "string" {
-				return tfModule, fmt.Errorf("The 'source' argument for module '%s' must be of type string", name)
+				return tfModule, fmt.Errorf("the 'source' argument for module '%s' must be of type string", name)
 			}
 			tfModule.ModuleSource = v.(string)
 
 		case "version":
 			if reflect.TypeOf(v).String() != "string" {
-				return tfModule, fmt.Errorf("The 'version' argument for module '%s' must be of type string", name)
+				return tfModule, fmt.Errorf("the 'version' argument for module '%s' must be of type string", name)
 			}
 			tfModule.Version = v.(string)
 
@@ -217,7 +217,7 @@ func buildModule(ctx context.Context, path string, content []byte, name string, 
 
 		case "provider":
 			if reflect.TypeOf(v).String() != "string" {
-				return tfModule, fmt.Errorf("The 'provider' argument for module '%s' must be of type string", name)
+				return tfModule, fmt.Errorf("the 'provider' argument for module '%s' must be of type string", name)
 			}
 			tfModule.Provider = v.(string)
 
@@ -231,7 +231,7 @@ func buildModule(ctx context.Context, path string, content []byte, name string, 
 
 		case "depends_on":
 			if reflect.TypeOf(v).String() != "[]interface {}" {
-				return tfModule, fmt.Errorf("The 'depends_on' argument for module '%s' must be of type list", name)
+				return tfModule, fmt.Errorf("the 'depends_on' argument for module '%s' must be of type list", name)
 			}
 			interfaces := v.([]interface{})
 			s := make([]string, len(interfaces))

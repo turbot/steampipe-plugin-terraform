@@ -19,8 +19,8 @@ import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
-	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
-	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
+	"github.com/turbot/steampipe-plugin-sdk/v6/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v6/plugin/transform"
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 
 	filehelpers "github.com/turbot/go-kit/files"
@@ -213,14 +213,14 @@ func convertExpressionValue(v interface{}) (valStr string, err error) {
 	case ctyjson.SimpleJSONValue:
 		val, err := v.MarshalJSON()
 		if err != nil {
-			return "", fmt.Errorf("Failed to convert SimpleJSONValue value %v: %w", v, err)
+			return "", fmt.Errorf("failed to convert SimpleJSONValue value %v: %w", v, err)
 		}
 		valStr = string(val)
 
 	case string:
 		val, err := json.Marshal(v)
 		if err != nil {
-			return "", fmt.Errorf("Failed to convert string value %v: %w", v, err)
+			return "", fmt.Errorf("failed to convert string value %v: %w", v, err)
 		}
 		valStr = string(val)
 
@@ -228,7 +228,7 @@ func convertExpressionValue(v interface{}) (valStr string, err error) {
 	case model.Document:
 		val, err := v.MarshalJSON()
 		if err != nil {
-			return "", fmt.Errorf("Failed to convert model.Document value %v: %w", v, err)
+			return "", fmt.Errorf("failed to convert model.Document value %v: %w", v, err)
 		}
 		valStr = string(val)
 
@@ -238,14 +238,14 @@ func convertExpressionValue(v interface{}) (valStr string, err error) {
 		for _, iValue := range v {
 			tempVal, err := convertExpressionValue(iValue)
 			if err != nil {
-				return "", fmt.Errorf("Failed to convert []interface{} value %v: %w", v, err)
+				return "", fmt.Errorf("failed to convert []interface{} value %v: %w", v, err)
 			}
 			valStrs = append(valStrs, tempVal)
 		}
 		valStr = fmt.Sprintf("[%s]", strings.Join(valStrs, ","))
 
 	default:
-		return "", fmt.Errorf("Failed to convert value %v due to unknown type: %T", v, v)
+		return "", fmt.Errorf("failed to convert value %v due to unknown type: %T", v, v)
 	}
 	return valStr, nil
 }
